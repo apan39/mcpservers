@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  python-mcp:
+    build: 
+      context: ./python
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  typescript-mcp:
+    build:
+      context: ./typescript
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"

@@ -1,0 +1,4 @@
+fastapi==0.109.2
+uvicorn==0.27.1
+git+https://github.com/modelcontextprotocol/python-sdk.git@v1.6.0#egg=mcp[cli]
+python-dotenv==1.0.0
