@@ -10,10 +10,11 @@
     "dev": "ts-node-esm src/server.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@modelcontextprotocol/sdk": "^1.10.1",
     "@types/cors": "^2.8.17",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "playwright": "^1.43.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

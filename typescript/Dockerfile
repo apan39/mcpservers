@@ -14,6 +14,8 @@ COPY . .
 # Build TypeScript code
 RUN npm run build
 
+RUN npx playwright install --with-deps
+
 # Expose port for SSE server
 EXPOSE 3001
 

@@ -12,6 +12,7 @@ from tools.math_tools import register_math_tools
 from tools.text_tools import register_text_tools
 from resources.greeting import register_greeting_resources
 from utils.logger import setup_logger
+from tools.crawl4ai_tools import register_crawl4ai_tools
 
 # Set up logging
 logger = setup_logger()
@@ -28,6 +29,9 @@ def create_app(port: int = 3000):
 
     # Register text tools
     register_text_tools(tool_registry)
+
+    # Register crawl4ai tools
+    register_crawl4ai_tools(tool_registry)
 
     # Register greeting resources
     register_greeting_resources(app)
@@ -84,8 +88,10 @@ def create_app(port: int = 3000):
 
     return starlette_app
 
+starlette_app = create_app()
+
 if __name__ == "__main__":
     PORT = int(os.environ.get("PORT", 3000))
     logger.info(f"Starting MCP server on port {PORT}")
-    starlette_app = create_app(PORT)
     uvicorn.run(starlette_app, host="0.0.0.0", port=PORT)
+

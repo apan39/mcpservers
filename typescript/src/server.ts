@@ -1,13 +1,17 @@
 import express, { Request, Response } from "express";
-import { McpServer, ResourceTemplate  } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport} from "@modelcontextprotocol/sdk/server/sse.js";
+import {
+  McpServer,
+  ResourceTemplate,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 // import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/resource.js";
 
+import { registerPlaywrightTools } from "./playwrightTools.js";
 
 const server = new McpServer({
   name: "example-server",
-  version: "1.0.0"
+  version: "1.0.0",
 });
 
 // Example tool for adding numbers
@@ -15,13 +19,15 @@ server.tool(
   "add-numbers",
   {
     a: z.number(),
-    b: z.number()
+    b: z.number(),
   },
   async ({ a, b }) => ({
-    content: [{
-      type: "text",
-      text: String(a + b)
-    }]
+    content: [
+      {
+        type: "text",
+        text: String(a + b),
+      },
+    ],
   })
 );
 
@@ -30,10 +36,12 @@ server.resource(
   "greeting",
   new ResourceTemplate("greeting://{name}", { list: undefined }),
   async (uri, { name }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Hello, ${name}! Welcome to the TypeScript MCP server.`
-    }]
+    contents: [
+      {
+        uri: uri.href,
+        text: `Hello, ${name}! Welcome to the TypeScript MCP server.`,
+      },
+    ],
   })
 );
 
@@ -42,11 +50,11 @@ server.tool(
   "string-operations",
   {
     text: z.string(),
-    operation: z.enum(["uppercase", "lowercase", "reverse"])
+    operation: z.enum(["uppercase", "lowercase", "reverse"]),
   },
   async ({ text, operation }) => {
     let result: string;
-    
+
     switch (operation) {
       case "uppercase":
         result = text.toUpperCase();
@@ -55,29 +63,33 @@ server.tool(
         result = text.toLowerCase();
         break;
       case "reverse":
-        result = text.split('').reverse().join('');
+        result = text.split("").reverse().join("");
         break;
       default:
         throw new Error(`Unknown operation: ${operation}`);
     }
 
     return {
-      content: [{
-        type: "text",
-        text: result
-      }]
+      content: [
+        {
+          type: "text",
+          text: result,
+        },
+      ],
     };
   }
 );
+
+registerPlaywrightTools(server);
 
 const app = express();
 
 // to support multiple simultaneous connections we have a lookup object from
 // sessionId to transport
-const transports: {[sessionId: string]: SSEServerTransport} = {};
+const transports: { [sessionId: string]: SSEServerTransport } = {};
 
 app.get("/sse", async (_: Request, res: Response) => {
-  const transport = new SSEServerTransport('/messages', res);
+  const transport = new SSEServerTransport("/messages", res);
   transports[transport.sessionId] = transport;
   res.on("close", () => {
     delete transports[transport.sessionId];
@@ -91,7 +103,7 @@ app.post("/messages", async (req: Request, res: Response) => {
   if (transport) {
     await transport.handlePostMessage(req, res);
   } else {
-    res.status(400).send('No transport found for sessionId');
+    res.status(400).send("No transport found for sessionId");
   }
 });
 
@@ -151,7 +163,7 @@ app.listen(3001);
 //   },
 //   async ({ text, operation }) => {
 //     let result: string;
-    
+
 //     switch (operation) {
 //       case "uppercase":
 //         result = text.toUpperCase();
