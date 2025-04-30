@@ -1,3 +1,4 @@
+from dotenv import load_dotenv; load_dotenv()
 import anyio
 import uvicorn
 import os
@@ -13,6 +14,23 @@ from tools.text_tools import register_text_tools
 from resources.greeting import register_greeting_resources
 from utils.logger import setup_logger
 from tools.crawl4ai_tools import register_crawl4ai_tools
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.middleware.cors import CORSMiddleware
+
+API_KEY = os.environ.get("MCP_API_KEY", "changeme")  # Set this in your environment for production
+
+class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Allow health check and /sse without auth
+        if request.url.path in ["/health", "/sse"]:
+            return await call_next(request)
+        auth = request.headers.get("authorization")
+        if not auth or auth != f"Bearer {API_KEY}":
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+        return await call_next(request)
 
 # Set up logging
 logger = setup_logger()
@@ -69,7 +87,12 @@ def create_app(port: int = 3000):
         except anyio.BrokenResourceError:
             logger.warning("SSE connection closed by client.")
         except Exception as e:
-            logger.error(f"Unexpected error in SSE handler: {e}")
+            import traceback
+            logger.error(f"Unexpected error in SSE handler: {e}\n" + traceback.format_exc())
+            # If the exception is a TaskGroupError, log sub-exceptions
+            if hasattr(e, 'exceptions'):
+                for idx, sub_exc in enumerate(e.exceptions):
+                    logger.error(f"Sub-exception {idx+1}: {sub_exc}\n" + (getattr(sub_exc, 'traceback', None) or ''))
             raise
 
     # Health check endpoint
@@ -84,10 +107,18 @@ def create_app(port: int = 3000):
             Route("/health", endpoint=health_check),
             Mount("/messages/", app=sse.handle_post_message),
         ],
+        middleware=[
+            (ApiKeyAuthMiddleware, [], {}),
+            (CORSMiddleware, [], {
+                "allow_origins": ["*"],
+                "allow_methods": ["*"],
+                "allow_headers": ["*"],
+            }),
+        ]
     )
-
+ 
     return starlette_app
-
+ 
 starlette_app = create_app()
 
 if __name__ == "__main__":

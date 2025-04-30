@@ -16,3 +16,19 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mcpuser
+      POSTGRES_PASSWORD: mcppassword
+      POSTGRES_DB: mcpdb
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+
+volumes:
+  pgdata:
