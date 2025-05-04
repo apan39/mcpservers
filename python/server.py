@@ -8,6 +8,8 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.responses import JSONResponse
+import datetime
+from collections import defaultdict
 
 from tools.math_tools import register_math_tools
 from tools.text_tools import register_text_tools
@@ -20,17 +22,34 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-API_KEY = os.environ.get("MCP_API_KEY", "changeme")  # Set this in your environment for production
+API_KEY = os.environ.get("API_KEY", "changeme")  # Set this in your environment for production
+
+# Global in-memory store for authorized IPs and their last auth date
+AUTHORIZED_IPS = defaultdict(lambda: None)
 
 class ApiKeyAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Allow health check and /sse without auth
-        if request.url.path in ["/health", "/sse"]:
+        # Get client IP (use X-Forwarded-For if behind proxy, else .client.host)
+        client_ip = request.headers.get("x-forwarded-for") or request.client.host
+        today = datetime.date.today()
+        last_auth_date = AUTHORIZED_IPS[client_ip]
+        # Allow health check without auth
+        if request.url.path in ["/health"]:
             return await call_next(request)
+        # If already authorized today, allow
+        if last_auth_date == today:
+            return await call_next(request)
+        # Check Authorization header
         auth = request.headers.get("authorization")
-        if not auth or auth != f"Bearer {API_KEY}":
-            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
-        return await call_next(request)
+        if auth and auth == f"Bearer {API_KEY}":
+            AUTHORIZED_IPS[client_ip] = today
+            return await call_next(request)
+        # Check query parameter
+        api_key = request.query_params.get("api_key")
+        if api_key and api_key == API_KEY:
+            AUTHORIZED_IPS[client_ip] = today
+            return await call_next(request)
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
 
 # Set up logging
 logger = setup_logger()
