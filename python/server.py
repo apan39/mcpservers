@@ -22,8 +22,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-API_KEY = os.environ.get("API_KEY", "changeme")  # Set this in your environment for production
-
+# API_KEY = os.environ.get("API_KEY")  # Set this in your environment for production
+API_KEY = os.environ.get("MCP_API_KEY")  # Set this in your environment for production
 # Global in-memory store for authorized IPs and their last auth date
 AUTHORIZED_IPS = defaultdict(lambda: None)
 
@@ -141,7 +141,7 @@ def create_app(port: int = 3000):
 starlette_app = create_app()
 
 if __name__ == "__main__":
-    PORT = int(os.environ.get("PORT", 3000))
+    PORT = int(os.environ.get("PORT", 3002))
     logger.info(f"Starting MCP server on port {PORT}")
     uvicorn.run(starlette_app, host="0.0.0.0", port=PORT)
 

@@ -9,8 +9,25 @@ import {
   isInitializeRequest,
   ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
+  // --- SSE support using /connect and /messages endpoints ---
+
+  import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 import { registerPlaywrightTools } from "./playwrightTools.js";
+import * as path from "path";
+import * as dotenv from "dotenv";
+import { fileURLToPath } from "url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+// --- Authorization Middleware: Allow once per IP per day ---
+import dayjs from "dayjs";
+
+import cors from "cors";
+
+const API_KEY = process.env.MCP_API_KEY || "changeme";
+const authorizedIPs: Record<string, string> = {};
+
 // If you want resumability, you can implement an event store (optional)
 // For demo, we'll use a simple in-memory event store
 class InMemoryEventStore {
@@ -217,7 +234,49 @@ function getServer(): McpServer {
 }
 
 const app = express();
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type"],
+  credentials: false
+}));
 app.use(express.json());
+
+app.use((req, res, next) => {
+  // Allow health check, /messages, /sse, and /.well-known/oauth-authorization-server without auth
+  if (
+    req.path === "/health" ||
+    req.path === "/messages" ||
+    // req.path === "/sse" ||
+    req.path === "/.well-known/oauth-authorization-server"
+  ) return next();
+  // Get client IP (trust proxy if needed)
+  const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0] || req.socket.remoteAddress || "unknown";
+  const today = dayjs().format("YYYY-MM-DD");
+  console.log(`[AUTH] Path: ${req.path}, IP: ${ip}, Today: ${today}, Authorized: ${authorizedIPs[ip]}`);
+  console.log(`[AUTH] Authorization header:`, req.header("authorization"));
+  console.log(`[AUTH] MCP_API_KEY: ${API_KEY}`);
+  console.log(`[AUTH] Incoming Authorization header:`, req.header("authorization"));
+  if (authorizedIPs[ip] === today) {
+    console.log(`[AUTH] IP ${ip} already authorized for today.`);
+    return next();
+  }
+  // Check Authorization header
+  const auth = req.header("authorization");
+  if (auth && auth === `Bearer ${API_KEY}`) {
+    authorizedIPs[ip] = today;
+    console.log(`[AUTH] IP ${ip} authorized via Authorization header.`);
+    return next();
+  }
+  // Check api_key query param
+  if (req.query.api_key && req.query.api_key === API_KEY) {
+    authorizedIPs[ip] = today;
+    console.log(`[AUTH] IP ${ip} authorized via api_key query param.`);
+    return next();
+  }
+  console.log(`[AUTH] Unauthorized request from IP ${ip}`);
+  res.status(401).json({ detail: "Unauthorized" });
+});
 
 // Map to store transports by session ID
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
@@ -310,9 +369,7 @@ app.get("/mcp", async (req: Request, res: Response) => {
 
   const lastEventId = req.headers["last-event-id"] as string | undefined;
   const transport = transports[sessionId];
-  // --- SSE support using /connect and /messages endpoints ---
 
-  import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
   // Map to store SSE transports by session ID
   const sseTransports: { [sessionId: string]: SSEServerTransport } = {};
@@ -383,6 +440,32 @@ app.get("/mcp", async (req: Request, res: Response) => {
     await transport.handleRequest(req, res);
   }
 });
+// --- SSE /sse endpoint for MCP Inspector compatibility ---
+const sseTransports: { [sessionId: string]: SSEServerTransport } = {};
+
+app.get("/sse", async (req: Request, res: Response) => {
+  // Create a new SSE transport and connect to the MCP server
+  const transport = new SSEServerTransport("/messages", res);
+  sseTransports[transport.sessionId] = transport;
+
+  res.on("close", () => {
+    delete sseTransports[transport.sessionId];
+  });
+
+  const server = getServer();
+  await server.connect(transport);
+});
+
+// --- POST /messages endpoint for SSE transport ---
+app.post("/messages", async (req: Request, res: Response) => {
+  const sessionId = req.query.sessionId as string | undefined;
+  if (!sessionId || !sseTransports[sessionId]) {
+    res.status(400).send({ message: "Invalid or missing sessionId" });
+    return;
+  }
+  const transport = sseTransports[sessionId];
+  await transport.handlePostMessage(req, res, req.body);
+});
 // SSE endpoint for streaming events in parallel to HTTP streaming
 app.get("/mcp-sse", async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
@@ -447,7 +530,7 @@ app.delete("/mcp", async (req: Request, res: Response) => {
   }
 });
 
-const PORT = 3000;
+const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`MCP Streamable HTTP Server listening on port ${PORT}`);
 });

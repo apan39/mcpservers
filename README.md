@@ -38,6 +38,9 @@ pip install -r requirements.txt
 uvicorn server:app --host 0.0.0.0 --port 3000
 ```
 
+locally:
+cd /Users/johansimac/development/mcpservers/python && source venv/bin/activate && python server.py
+
 The Python server will be available at `http://localhost:3000`.
 
 ### TypeScript Server
