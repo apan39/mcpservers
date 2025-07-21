@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains production-ready MCP (Model Context Protocol) servers implemented in both Python and TypeScript. The servers have been hardened for network deployment with proper security, error handling, and monitoring.
+This repository contains production-ready MCP (Model Context Protocol) servers with **Coolify API integration**. The servers are hardened for network deployment with proper security, error handling, and monitoring. Includes full GitHub-to-Coolify deployment automation.
 
 ## Security Features
 
@@ -23,13 +23,16 @@ This repository contains production-ready MCP (Model Context Protocol) servers i
    
    **Required variables:**
    - `MCP_API_KEY` - Strong API key for authentication
-   - `POSTGRES_PASSWORD` - Secure database password
+   
+   **Coolify Integration (Optional):**
+   - `COOLIFY_BASE_URL` - Your Coolify instance URL (e.g., https://coolify.example.com)
+   - `COOLIFY_API_TOKEN` - API token from Coolify "Keys & Tokens"
    
    **Optional variables:**
    - `ALLOWED_ORIGINS` - Comma-separated list of allowed origins
    - `LOG_LEVEL` - Logging level (DEBUG, INFO, WARNING, ERROR)
 
-2. **Coolify Setup** - Ensure your Coolify instance is configured
+2. **Coolify Setup** - Ensure your Coolify instance is configured and accessible
 
 ## Deployment Steps
 
@@ -61,7 +64,8 @@ curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3010/mcp
    In Coolify, set these environment variables:
    ```
    MCP_API_KEY=your-secure-api-key-here
-   POSTGRES_PASSWORD=your-secure-postgres-password
+   COOLIFY_BASE_URL=http://your-coolify-instance.com:8000
+   COOLIFY_API_TOKEN=your-coolify-api-token
    ALLOWED_ORIGINS=https://your-domain.com,https://other-allowed-domain.com
    LOG_LEVEL=INFO
    ```
@@ -98,14 +102,20 @@ curl -H "Authorization: Bearer YOUR_API_KEY" https://YOUR_DOMAIN:3009/mcp
   - `format-text` - Format text (title, sentence, camel case)
 
 - **Web Scraping Tools**
-  - `crawl-url` - Extract text from web pages using crawl4ai
+  - `crawl-url` - Extract text from web pages using BeautifulSoup
+
+- **🚀 Coolify API Tools**
+  - `coolify-get-version` - Get Coolify instance version
+  - `coolify-list-projects` - List all Coolify projects
+  - `coolify-list-servers` - List all Coolify servers
+  - `coolify-list-applications` - List applications in a project
+  - `coolify-create-github-app` - **Deploy GitHub repositories to Coolify**
 
 ### TypeScript Server (Port 3010)
 
 - **Basic Tools**
   - `greet` - Simple greeting tool
   - `multi-greet` - Multiple greetings with notifications
-  - `start-notification-stream` - Test streaming notifications
 
 - **Web Scraping Tools**
   - `scrape-dynamic-url` - Scrape dynamic web pages using Playwright
