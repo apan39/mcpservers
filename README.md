@@ -109,12 +109,24 @@ For detailed production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMEN
 
 ### Coolify Deployment Summary
 
-1. **Repository Setup**: Connect your GitHub repository
-2. **Environment Variables**: Set `MCP_API_KEY` (and optionally `COOLIFY_BASE_URL`, `COOLIFY_API_TOKEN`)
-3. **Service Type**: Choose "Docker Compose"
-4. **Deploy**: Coolify will build and deploy automatically
+**🚀 Live Deployment Available!**
 
-> 💡 **Meta Feature**: Once deployed, you can use the Coolify integration tools to deploy *other* GitHub repositories!
+This project is deployed as separate services on Coolify:
+- **Python MCP Server**: Includes Coolify API integration, math, text, and web tools
+- **TypeScript MCP Server**: Playwright-based dynamic web scraping
+
+**Deployment Process:**
+1. **Create Project**: New "mcpservers" project created via Coolify API
+2. **Deploy Services**: Separate Nixpacks deployments for Python and TypeScript
+3. **Configure Environment**: Set API keys and Coolify integration variables
+4. **Access Globally**: Connect Claude Desktop/CLI to production URLs
+
+**Service Details:**
+- Python Server UUID: `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009)
+- TypeScript Server UUID: `k8wco488444c8gw0sscs04k8` (Port 3010)
+- Project UUID: `l8cog4c48w48kckkcgos8cwg`
+
+> 💡 **Meta Feature**: Once deployed, you can use the Coolify integration tools to deploy *other* GitHub repositories from anywhere!
 
 ## Security Features
 

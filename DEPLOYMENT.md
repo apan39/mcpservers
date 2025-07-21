@@ -55,37 +55,60 @@ curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3010/mcp
 
 ### 2. Coolify Deployment
 
-1. **Create New Service**
-   - Choose "Docker Compose"
-   - Connect your repository
-   - Set branch to `main`
+**🚀 Automated Coolify API Deployment**
+
+This repository has been deployed using the Coolify API integration:
+
+1. **Project Created**: "mcpservers" project (`l8cog4c48w48kckkcgos8cwg`)
+2. **Services Deployed**:
+   - **Python MCP Server**: UUID `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009)
+   - **TypeScript MCP Server**: UUID `k8wco488444c8gw0sscs04k8` (Port 3010)
+
+**Manual Deployment (Alternative)**
+
+If you want to deploy manually:
+
+1. **Create New Applications** (separate services)
+   - **Python Service**:
+     - Build Pack: "Nixpacks"
+     - Base Directory: `python`
+     - Port: 3009
+   - **TypeScript Service**:
+     - Build Pack: "Nixpacks" 
+     - Base Directory: `typescript`
+     - Port: 3010
 
 2. **Environment Configuration**
-   In Coolify, set these environment variables:
+   Set these environment variables for the Python service:
    ```
    MCP_API_KEY=your-secure-api-key-here
    COOLIFY_BASE_URL=http://your-coolify-instance.com:8000
    COOLIFY_API_TOKEN=your-coolify-api-token
-   ALLOWED_ORIGINS=https://your-domain.com,https://other-allowed-domain.com
    LOG_LEVEL=INFO
    ```
 
 3. **Deploy**
-   - Click "Deploy" in Coolify
+   - Both services will build and deploy automatically
    - Monitor logs for successful startup
 
 ### 3. Production Verification
 
-After deployment, verify the services:
+After deployment, verify the services using the Coolify-assigned URLs:
 
 ```bash
-# Health checks (replace YOUR_DOMAIN)
-curl https://YOUR_DOMAIN:3009/health
-curl https://YOUR_DOMAIN:3010/health
+# Health checks (get URLs from Coolify dashboard)
+curl https://your-python-app.coolify-domain.com/health
+curl https://your-typescript-app.coolify-domain.com/health
 
 # Test authentication
-curl -H "Authorization: Bearer YOUR_API_KEY" https://YOUR_DOMAIN:3009/mcp
+curl -H "Authorization: Bearer YOUR_API_KEY" https://your-python-app.coolify-domain.com/mcp
 ```
+
+**Finding Your URLs:**
+- Go to your Coolify dashboard
+- Navigate to the "mcpservers" project
+- Check both applications for their assigned domains
+- Use these URLs to connect Claude Desktop/CLI
 
 ## Available Tools
 

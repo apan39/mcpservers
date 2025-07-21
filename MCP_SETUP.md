@@ -16,6 +16,7 @@ Shows:
 
 ### HTTP Transport Setup
 
+**Local Development:**
 ```bash
 # Add Python server (includes Coolify integration)
 claude mcp add --transport http python-tools http://localhost:3009/mcp
@@ -23,6 +24,22 @@ claude mcp add --transport http python-tools http://localhost:3009/mcp
 # Add TypeScript server (Playwright tools)
 claude mcp add --transport http typescript-tools http://localhost:3010/mcp
 ```
+
+**🚀 Production Deployment (Coolify):**
+```bash
+# Add production Python server (replace with your Coolify domain)
+claude mcp add --transport http python-tools https://your-python-app.coolify-domain.com/mcp
+
+# Add production TypeScript server (replace with your Coolify domain)  
+claude mcp add --transport http typescript-tools https://your-typescript-app.coolify-domain.com/mcp
+```
+
+**Finding Your Production URLs:**
+1. Go to your Coolify dashboard
+2. Navigate to the "mcpservers" project
+3. Check the domains assigned to:
+   - Python Server: `zs8sk0cgs4s8gsgwswsg88ko`
+   - TypeScript Server: `k8wco488444c8gw0sscs04k8`
 
 ### Quick Test
 
@@ -45,14 +62,26 @@ claude mcp call typescript-tools scrape-dynamic-url '{"url": "https://example.co
 
 ### If You Need to Reconfigure
 
+**Local Development:**
 ```bash
 # Remove existing connections
 claude mcp remove python-tools
 claude mcp remove typescript-tools
 
-# Re-add with HTTP transport
+# Re-add with HTTP transport (local)
 claude mcp add --transport http python-tools http://localhost:3009/mcp
 claude mcp add --transport http typescript-tools http://localhost:3010/mcp
+```
+
+**Production Deployment:**
+```bash
+# Remove existing connections
+claude mcp remove python-tools
+claude mcp remove typescript-tools
+
+# Re-add with production URLs (get from Coolify dashboard)
+claude mcp add --transport http python-tools https://your-python-app.coolify-domain.com/mcp
+claude mcp add --transport http typescript-tools https://your-typescript-app.coolify-domain.com/mcp
 ```
 
 ## 🛠 Available Tools
@@ -119,8 +148,16 @@ For Coolify tools to work:
 3. **Restart servers**: `docker compose down && docker compose up -d`
 4. **Test**: Use `coolify-list-projects` to verify connection
 
-## Environment Files
+## Deployment Information
 
-- `.env` - Your local environment configuration
-- `docker-compose.yml` - Container orchestration (no database required)
-- Health check endpoints available at `/health` on both servers
+**🚀 Live Production Deployment:**
+- **Project**: mcpservers (`l8cog4c48w48kckkcgos8cwg`)
+- **Python Server**: `zs8sk0cgs4s8gsgwswsg88ko` (Coolify API + tools)
+- **TypeScript Server**: `k8wco488444c8gw0sscs04k8` (Playwright tools)
+- **Repository**: https://github.com/apan39/mcpservers.git
+
+**Environment Files:**
+- `.env` - Local environment configuration  
+- `docker-compose.yml` - Local container orchestration
+- Production uses separate Nixpacks deployments via Coolify API
+- Health check endpoints available at `/health` on all servers
