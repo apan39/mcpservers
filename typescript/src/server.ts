@@ -3,46 +3,47 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import rateLimit from "express-rate-limit";
 import {
   CallToolResult,
   GetPromptResult,
   isInitializeRequest,
   ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
-  // --- SSE support using /connect and /messages endpoints ---
-
-  import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 import { registerPlaywrightTools } from "./playwrightTools.js";
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import dayjs from "dayjs";
+import cors from "cors";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-// --- Authorization Middleware: Allow once per IP per day ---
-import dayjs from "dayjs";
+// Configuration
+const API_KEY = process.env.MCP_API_KEY || (() => {
+  console.error('MCP_API_KEY environment variable is not set!');
+  process.exit(1);
+})();
 
-import cors from "cors";
+const PORT = parseInt(process.env.TYPESCRIPT_MCP_PORT || "3010");
 
-const API_KEY = process.env.MCP_API_KEY || "changeme";
-const authorizedIPs: Record<string, string> = {};
-
-// If you want resumability, you can implement an event store (optional)
-// For demo, we'll use a simple in-memory event store
+// Simple in-memory event store for resumability
 class InMemoryEventStore {
   private events: Record<string, any[]> = {};
+
   async storeEvent(streamId: string, message: any): Promise<string> {
     if (!this.events[streamId]) this.events[streamId] = [];
     this.events[streamId].push(message);
-    // Use array length as event ID for simplicity
     return String(this.events[streamId].length - 1);
   }
+
   async replayEventsAfter(
     lastEventId: string,
     { send }: { send: (eventId: string, message: any) => Promise<void> }
   ): Promise<string> {
-    // For demo, just replay all events after lastEventId
     for (const streamId in this.events) {
       const events = this.events[streamId];
       const start = lastEventId ? parseInt(lastEventId, 10) + 1 : 0;
@@ -53,29 +54,27 @@ class InMemoryEventStore {
     }
     return "";
   }
-  async append(sessionId: string, event: any) {
-    // Deprecated, for compatibility
-    return this.storeEvent(sessionId, event);
-  }
+
   async getEvents(sessionId: string) {
     return this.events[sessionId] || [];
   }
+
   async clear(sessionId: string) {
     delete this.events[sessionId];
   }
 }
 
-// Create an MCP server with implementation details
-function getServer(): McpServer {
+// Create MCP server with tools
+function createMCPServer(): McpServer {
   const server = new McpServer(
     {
-      name: "simple-streamable-http-server",
+      name: "typescript-mcp-server",
       version: "1.0.0",
     },
     { capabilities: { logging: {} } }
   );
 
-  // Register a simple tool that returns a greeting
+  // Simple greeting tool
   server.tool(
     "greet",
     "A simple greeting tool",
@@ -94,14 +93,13 @@ function getServer(): McpServer {
     }
   );
 
-  // Register a tool that sends multiple greetings with notifications
+  // Multi-greeting with notifications
   server.tool(
     "multi-greet",
     "A tool that sends different greetings with delays between them",
     {
       name: z.string().describe("Name to greet"),
     },
-    // Remove extra options object to match expected signature
     async (
       { name }: { name: string },
       { sendNotification }: { sendNotification: (msg: any) => Promise<void> }
@@ -109,37 +107,104 @@ function getServer(): McpServer {
       const sleep = (ms: number) =>
         new Promise((resolve) => setTimeout(resolve, ms));
 
-      await sendNotification({
-        method: "notifications/message",
-        params: { level: "debug", data: `Starting multi-greet for ${name}` },
-      });
+      try {
+        await sendNotification({
+          method: "notifications/message",
+          params: { level: "debug", data: `Starting multi-greet for ${name}` },
+        });
 
-      await sleep(1000);
+        await sleep(1000);
 
-      await sendNotification({
-        method: "notifications/message",
-        params: { level: "info", data: `Sending first greeting to ${name}` },
-      });
+        await sendNotification({
+          method: "notifications/message",
+          params: { level: "info", data: `Sending greeting to ${name}` },
+        });
 
-      await sleep(1000);
-
-      await sendNotification({
-        method: "notifications/message",
-        params: { level: "info", data: `Sending second greeting to ${name}` },
-      });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Good morning, ${name}!`,
-          },
-        ],
-      };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Good morning, ${name}!`,
+            },
+          ],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error in multi-greet: ${errorMessage}`,
+            },
+          ],
+        };
+      }
     }
   );
 
-  // Register a simple prompt
+  // Notification stream tool
+  server.tool(
+    "start-notification-stream",
+    "Starts sending periodic notifications for testing resumability",
+    {
+      interval: z
+        .number()
+        .min(100)
+        .max(10000)
+        .describe("Interval in milliseconds between notifications")
+        .default(1000),
+      count: z
+        .number()
+        .min(1)
+        .max(20)
+        .describe("Number of notifications to send")
+        .default(5),
+    },
+    async (
+      { interval, count },
+      { sendNotification }
+    ): Promise<CallToolResult> => {
+      const sleep = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+      
+      try {
+        for (let counter = 1; counter <= count; counter++) {
+          await sendNotification({
+            method: "notifications/message",
+            params: {
+              level: "info",
+              data: `Notification ${counter}/${count} at ${new Date().toISOString()}`,
+            },
+          });
+          
+          if (counter < count) {
+            await sleep(interval);
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Successfully sent ${count} notifications with ${interval}ms interval`,
+            },
+          ],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error sending notifications: ${errorMessage}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Simple prompt
   server.prompt(
     "greeting-template",
     "A simple greeting prompt template",
@@ -161,60 +226,7 @@ function getServer(): McpServer {
     }
   );
 
-  // Register a tool for testing resumability
-  server.tool(
-    "start-notification-stream",
-    "Starts sending periodic notifications for testing resumability",
-    {
-      interval: z
-        .number()
-        .describe("Interval in milliseconds between notifications")
-        .default(100),
-      count: z
-        .number()
-        .describe("Number of notifications to send (0 for 100)")
-        .default(50),
-    },
-    async (
-      { interval, count },
-      { sendNotification }
-    ): Promise<CallToolResult> => {
-      const sleep = (ms: number) =>
-        new Promise((resolve) => setTimeout(resolve, ms));
-      let counter = 0;
-
-      while (count === 0 || counter < count) {
-        counter++;
-        try {
-          await sendNotification({
-            method: "notifications/message",
-            params: {
-              level: "info",
-              data: `Periodic notification #${counter} at ${new Date().toISOString()}`,
-            },
-          });
-        } catch (error) {
-          console.error("Error sending notification:", error);
-        }
-        await sleep(interval);
-      }
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Started sending periodic notifications every ${interval}ms`,
-          },
-        ],
-      };
-    }
-  );
-
-  // Register Playwright tools
-  registerPlaywrightTools(server);
-  return server;
-
-  // Create a simple resource at a fixed URI
+  // Simple resource
   server.resource(
     "greeting-resource",
     "https://example.com/greetings/default",
@@ -230,57 +242,67 @@ function getServer(): McpServer {
       };
     }
   );
+
+  // Register Playwright tools
+  registerPlaywrightTools(server);
+  
   return server;
 }
 
+// Express app setup
 const app = express();
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"],
-  credentials: false
-}));
-app.use(express.json());
 
-app.use((req, res, next) => {
-  // Allow health check, /messages, /sse, and /.well-known/oauth-authorization-server without auth
-  if (
-    req.path === "/health" ||
-    req.path === "/messages" ||
-    // req.path === "/sse" ||
-    req.path === "/.well-known/oauth-authorization-server"
-  ) return next();
-  // Get client IP (trust proxy if needed)
-  const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0] || req.socket.remoteAddress || "unknown";
-  const today = dayjs().format("YYYY-MM-DD");
-  console.log(`[AUTH] Path: ${req.path}, IP: ${ip}, Today: ${today}, Authorized: ${authorizedIPs[ip]}`);
-  console.log(`[AUTH] Authorization header:`, req.header("authorization"));
-  console.log(`[AUTH] MCP_API_KEY: ${API_KEY}`);
-  console.log(`[AUTH] Incoming Authorization header:`, req.header("authorization"));
-  if (authorizedIPs[ip] === today) {
-    console.log(`[AUTH] IP ${ip} already authorized for today.`);
-    return next();
-  }
-  // Check Authorization header
-  const auth = req.header("authorization");
-  if (auth && auth === `Bearer ${API_KEY}`) {
-    authorizedIPs[ip] = today;
-    console.log(`[AUTH] IP ${ip} authorized via Authorization header.`);
-    return next();
-  }
-  // Check api_key query param
-  if (req.query.api_key && req.query.api_key === API_KEY) {
-    authorizedIPs[ip] = today;
-    console.log(`[AUTH] IP ${ip} authorized via api_key query param.`);
-    return next();
-  }
-  console.log(`[AUTH] Unauthorized request from IP ${ip}`);
-  res.status(401).json({ detail: "Unauthorized" });
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
+// CORS
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3009', 'http://localhost:3010'],
+  methods: ["GET", "POST", "OPTIONS", "DELETE"],
+  allowedHeaders: ["Authorization", "Content-Type", "mcp-session-id", "last-event-id"],
+  credentials: true
+}));
+
+app.use(express.json({ limit: '10mb' }));
+
+// Health check endpoint (no auth required)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Map to store transports by session ID
-const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+// Authentication middleware
+app.use((req, res, next) => {
+  // Allow health check without auth
+  if (req.path === "/health") return next();
+  
+  // Check Authorization header
+  const auth = req.header("authorization");
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      error: "Missing or invalid Authorization header. Use Bearer token." 
+    });
+  }
+  
+  const token = auth.substring(7); // Remove 'Bearer ' prefix
+  if (token !== API_KEY) {
+    return res.status(401).json({ error: "Invalid API key" });
+  }
+  
+  next();
+});
 
+// Session management
+const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+const sseTransports: { [sessionId: string]: SSEServerTransport } = {};
+
+// Main MCP endpoint (StreamableHTTP)
 app.post("/mcp", async (req: Request, res: Response) => {
   try {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
@@ -305,9 +327,8 @@ app.post("/mcp", async (req: Request, res: Response) => {
         }
       };
 
-      const server = getServer();
+      const server = createMCPServer();
       await server.connect(transport);
-
       await transport.handleRequest(req, res, req.body);
       return;
     } else {
@@ -324,6 +345,7 @@ app.post("/mcp", async (req: Request, res: Response) => {
 
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
+    console.error("Error handling MCP request:", error);
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: "2.0",
@@ -337,46 +359,9 @@ app.post("/mcp", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/mcp", async (req: Request, res: Response) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
-  const acceptHeader = req.headers["accept"] || "";
-  const isSSE =
-    typeof acceptHeader === "string" &&
-    acceptHeader.includes("text/event-stream");
-
-  if (!sessionId || !transports[sessionId]) {
-    if (isSSE) {
-      // SSE client: respond with SSE error message instead of 400
-      res.set({
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      });
-      res.flushHeaders();
-      res.write(
-        `data: ${JSON.stringify({
-          message: "SSE transport is deprecated. Use streamable-http instead.",
-          code: 400,
-          type: "error",
-        })}\n\n`
-      );
-      res.end();
-    } else {
-      res.status(400).send("Invalid or missing session ID");
-    }
-    return;
-  }
-
-  const lastEventId = req.headers["last-event-id"] as string | undefined;
-  const transport = transports[sessionId];
-
-
-  // Map to store SSE transports by session ID
-  const sseTransports: { [sessionId: string]: SSEServerTransport } = {};
-
-  // SSE connection endpoint
-  app.get("/connect", async (req: Request, res: Response) => {
-    // Create a new SSE transport and connect to the MCP server
+// SSE endpoints for MCP Inspector compatibility
+app.get("/sse", async (req: Request, res: Response) => {
+  try {
     const transport = new SSEServerTransport("/messages", res);
     sseTransports[transport.sessionId] = transport;
 
@@ -384,165 +369,75 @@ app.get("/mcp", async (req: Request, res: Response) => {
       delete sseTransports[transport.sessionId];
     });
 
-    const server = getServer();
+    const server = createMCPServer();
     await server.connect(transport);
+  } catch (error) {
+    console.error("Error handling SSE connection:", error);
+  }
+});
 
-    // Optionally send a welcome message or start streaming
-    // await transport.send({ jsonrpc: "2.0", method: "sse/connection", params: { message: "SSE Connection established" } });
-  });
-
-  // SSE message POST endpoint
-  app.post("/messages", async (req: Request, res: Response) => {
+app.post("/messages", async (req: Request, res: Response) => {
+  try {
     const sessionId = req.query.sessionId as string | undefined;
     if (!sessionId || !sseTransports[sessionId]) {
-      res.status(400).send({ message: "Invalid or missing sessionId" });
+      res.status(400).json({ error: "Invalid or missing sessionId" });
       return;
     }
     const transport = sseTransports[sessionId];
     await transport.handlePostMessage(req, res, req.body);
-  });
+  } catch (error) {
+    console.error("Error handling SSE message:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
 
-  if (isSSE) {
-    // SSE streaming logic (same as /mcp-sse)
-    const eventStore = (transport as any).eventStore as any;
-    if (!eventStore) {
-      res.status(500).send("No event store found for session");
+// Session cleanup endpoint
+app.delete("/mcp", async (req: Request, res: Response) => {
+  try {
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    if (!sessionId || !transports[sessionId]) {
+      res.status(400).json({ error: "Invalid or missing session ID" });
       return;
     }
 
-    res.set({
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    res.flushHeaders();
-
-    const events = await eventStore.getEvents(sessionId);
-    let lastId = 0;
-    for (let i = 0; i < events.length; i++) {
-      res.write(`id: ${i}\ndata: ${JSON.stringify(events[i])}\n\n`);
-      lastId = i;
-    }
-
-    const interval = setInterval(async () => {
-      const newEvents = await eventStore.getEvents(sessionId);
-      for (let i = lastId + 1; i < newEvents.length; i++) {
-        res.write(`id: ${i}\ndata: ${JSON.stringify(newEvents[i])}\n\n`);
-        lastId = i;
-      }
-    }, 1000);
-
-    req.on("close", () => {
-      clearInterval(interval);
-      res.end();
-    });
-  } else {
-    await transport.handleRequest(req, res);
-  }
-});
-// --- SSE /sse endpoint for MCP Inspector compatibility ---
-const sseTransports: { [sessionId: string]: SSEServerTransport } = {};
-
-app.get("/sse", async (req: Request, res: Response) => {
-  // Create a new SSE transport and connect to the MCP server
-  const transport = new SSEServerTransport("/messages", res);
-  sseTransports[transport.sessionId] = transport;
-
-  res.on("close", () => {
-    delete sseTransports[transport.sessionId];
-  });
-
-  const server = getServer();
-  await server.connect(transport);
-});
-
-// --- POST /messages endpoint for SSE transport ---
-app.post("/messages", async (req: Request, res: Response) => {
-  const sessionId = req.query.sessionId as string | undefined;
-  if (!sessionId || !sseTransports[sessionId]) {
-    res.status(400).send({ message: "Invalid or missing sessionId" });
-    return;
-  }
-  const transport = sseTransports[sessionId];
-  await transport.handlePostMessage(req, res, req.body);
-});
-// SSE endpoint for streaming events in parallel to HTTP streaming
-app.get("/mcp-sse", async (req: Request, res: Response) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
-  if (!sessionId || !transports[sessionId]) {
-    res.status(400).send("Invalid or missing session ID");
-    return;
-  }
-
-  // Set SSE headers
-  res.set({
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
-  res.flushHeaders();
-
-  // Access the event store from the transport
-  const transport = transports[sessionId];
-  const eventStore = (transport as any).eventStore as any;
-  if (!eventStore) {
-    res.status(500).send("No event store found for session");
-    return;
-  }
-
-  // Get all events for the session and stream them
-  const events = await eventStore.getEvents(sessionId);
-  let lastId = 0;
-  for (let i = 0; i < events.length; i++) {
-    res.write(`id: ${i}\ndata: ${JSON.stringify(events[i])}\n\n`);
-    lastId = i;
-  }
-
-  // Listen for new events and stream them as they arrive
-  const interval = setInterval(async () => {
-    const newEvents = await eventStore.getEvents(sessionId);
-    for (let i = lastId + 1; i < newEvents.length; i++) {
-      res.write(`id: ${i}\ndata: ${JSON.stringify(newEvents[i])}\n\n`);
-      lastId = i;
-    }
-  }, 1000);
-
-  req.on("close", () => {
-    clearInterval(interval);
-    res.end();
-  });
-});
-
-app.delete("/mcp", async (req: Request, res: Response) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
-  if (!sessionId || !transports[sessionId]) {
-    res.status(400).send("Invalid or missing session ID");
-    return;
-  }
-
-  try {
     const transport = transports[sessionId];
     await transport.handleRequest(req, res);
   } catch (error) {
+    console.error("Error handling session cleanup:", error);
     if (!res.headersSent) {
-      res.status(500).send("Error processing session termination");
+      res.status(500).json({ error: "Error processing session termination" });
     }
   }
 });
 
-const PORT = 3001;
+// Start server
 app.listen(PORT, () => {
-  console.log(`MCP Streamable HTTP Server listening on port ${PORT}`);
+  console.log(`TypeScript MCP Server listening on port ${PORT}`);
 });
 
+// Graceful shutdown
 process.on("SIGINT", async () => {
+  console.log("Shutting down gracefully...");
+  
+  // Close all transports
   for (const sessionId in transports) {
     try {
       await transports[sessionId].close();
       delete transports[sessionId];
     } catch (error) {
-      // Ignore errors on shutdown
+      console.error(`Error closing transport ${sessionId}:`, error);
     }
   }
+  
+  for (const sessionId in sseTransports) {
+    try {
+      delete sseTransports[sessionId];
+    } catch (error) {
+      console.error(`Error cleaning up SSE transport ${sessionId}:`, error);
+    }
+  }
+  
   process.exit(0);
 });

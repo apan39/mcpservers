@@ -7,7 +7,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PYTHON_MCP_PORT:-3009}:3009"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - COOLIFY_BASE_URL=${COOLIFY_BASE_URL}
+      - COOLIFY_API_TOKEN=${COOLIFY_API_TOKEN}
 
   typescript-mcp:
     build:
@@ -15,20 +20,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "3001:3001"
-
-  postgres:
-    image: postgres:15
-    restart: unless-stopped
+      - "${TYPESCRIPT_MCP_PORT:-3010}:3010"
     environment:
-      POSTGRES_USER: mcpuser
-      POSTGRES_PASSWORD: mcppassword
-      POSTGRES_DB: mcpdb
-    ports:
-      - "55432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d
-
-volumes:
-  pgdata:
+      - MCP_API_KEY=${MCP_API_KEY}
+      - NODE_ENV=production

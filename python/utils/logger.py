@@ -13,19 +13,29 @@ def setup_logger(name: str = "mcp_server", level: Optional[int] = None) -> loggi
     Returns:
         Configured logger instance
     """
+    import os
+    
     if level is None:
-        level = logging.INFO
+        env_level = os.getenv("LOG_LEVEL", "INFO").upper()
+        level = getattr(logging, env_level, logging.INFO)
         
     logger = logging.getLogger(name)
+    
+    # Prevent duplicate handlers
+    if logger.handlers:
+        return logger
+        
     logger.setLevel(level)
     
-    # Create console handler if none exists
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+    # Create console handler
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    
+    # Prevent propagation to avoid duplicate logs
+    logger.propagate = False
     
     return logger

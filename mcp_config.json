@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "python-tools": {
+      "command": "python",
+      "args": ["/Users/johansimac/development/mcpservers/python/mcp_stdio_server.py"]
+    },
+    "typescript-tools": {
+      "command": "node", 
+      "args": ["/Users/johansimac/development/mcpservers/typescript/dist/stdio_server.js"]
+    }
+  }
+}

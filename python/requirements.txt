@@ -1,5 +1,9 @@
-fastapi==0.109.2
-uvicorn==0.27.1
-git+https://github.com/modelcontextprotocol/python-sdk.git@v1.6.0#egg=mcp[cli]
-python-dotenv==1.0.0
-crawl4ai
+anyio==4.9.0
+click==8.2.1
+pydantic==2.11.7
+starlette==0.47.2
+uvicorn==0.35.0
+git+https://github.com/modelcontextprotocol/python-sdk.git@main#egg=mcp[cli]
+python-dotenv==1.1.1
+requests==2.32.4
+beautifulsoup4==4.13.4

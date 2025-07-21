@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "python-math-text-tools": {
+      "command": "python",
+      "args": ["/Users/johansimac/development/mcpservers/python/mcp_server.py"],
+      "env": {
+        "MCP_API_KEY": "test-api-key-12345",
+        "PORT": "3009"
+      }
+    },
+    "typescript-web-tools": {
+      "command": "node",
+      "args": ["/Users/johansimac/development/mcpservers/typescript/dist/server.js"],
+      "env": {
+        "MCP_API_KEY": "test-api-key-12345",
+        "TYPESCRIPT_MCP_PORT": "3010"
+      }
+    }
+  }
+}
