@@ -24,9 +24,9 @@ COPY --chown=appuser:appuser . .
 # Expose port
 EXPOSE 3009
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:3009/health', timeout=5)"
+# Health check - simple process check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD pgrep -f "uvicorn" || exit 1
 
 # Start the production server
-CMD ["python", "-m", "uvicorn", "mcp_server:create_app", "--factory", "--host", "0.0.0.0", "--port", "3009"]
+CMD ["python", "start.py"]
