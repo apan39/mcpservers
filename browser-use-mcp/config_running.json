@@ -1,0 +1,90 @@
+{
+  "server_info": {
+    "name": "browser-use-mcp-server",
+    "version": "1.0.0",
+    "status": "running",
+    "url": "http://localhost:3005",
+    "api_key": "demo-api-key-123",
+    "endpoints": {
+      "health": "http://localhost:3005/health",
+      "sse": "http://localhost:3005/sse",
+      "messages": "http://localhost:3005/messages/"
+    }
+  },
+  "integration_configs": {
+    "claude_desktop": {
+      "mcpServers": {
+        "browser-use": {
+          "command": "python3",
+          "args": ["/Users/imac_2/utveckling/mcpservers/browser-use-mcp/server_simple.py"],
+          "env": {
+            "API_KEY": "demo-api-key-123",
+            "PORT": "3005",
+            "OPENAI_API_KEY": "your-openai-api-key",
+            "ANTHROPIC_API_KEY": "your-anthropic-api-key"
+          }
+        }
+      }
+    },
+    "continue_dev": {
+      "mcpServers": [
+        {
+          "name": "browser-use",
+          "url": "http://localhost:3005",
+          "apiKey": "demo-api-key-123",
+          "description": "Browser automation with AI agents"
+        }
+      ]
+    },
+    "direct_client": {
+      "url": "http://localhost:3005/sse",
+      "api_key": "demo-api-key-123",
+      "example_code": "from mcp.client.sse import sse_client; transport = sse_client('http://localhost:3005/sse')"
+    }
+  },
+  "available_tools": [
+    {
+      "name": "create_browser_session",
+      "description": "Create a new browser session",
+      "parameters": ["session_id", "headless"]
+    },
+    {
+      "name": "navigate_to_url", 
+      "description": "Navigate to a URL",
+      "parameters": ["session_id", "url"]
+    },
+    {
+      "name": "get_page_content",
+      "description": "Get the current page content",
+      "parameters": ["session_id"]
+    },
+    {
+      "name": "execute_task",
+      "description": "Execute a task using AI agent",
+      "parameters": ["session_id", "task", "provider"]
+    },
+    {
+      "name": "close_session",
+      "description": "Close a browser session", 
+      "parameters": ["session_id"]
+    },
+    {
+      "name": "list_sessions",
+      "description": "List all active sessions",
+      "parameters": []
+    }
+  ],
+  "usage_examples": {
+    "basic_workflow": [
+      "create_browser_session(session_id='my-session', headless=True)",
+      "navigate_to_url(session_id='my-session', url='https://example.com')",
+      "get_page_content(session_id='my-session')",
+      "close_session(session_id='my-session')"
+    ],
+    "ai_agent_workflow": [
+      "create_browser_session(session_id='ai-session', headless=True)",
+      "execute_task(session_id='ai-session', task='Go to Google and search for AI', provider='openai')",
+      "close_session(session_id='ai-session')"
+    ]
+  }
+}

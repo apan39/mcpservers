@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "browser-use": {
+      "command": "python",
+      "args": ["/path/to/browser-use-mcp/server.py"],
+      "env": {
+        "API_KEY": "your-secure-api-key",
+        "ANTHROPIC_API_KEY": "your-anthropic-api-key",
+        "OPENAI_API_KEY": "your-openai-api-key",
+        "PORT": "3000",
+        "LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}

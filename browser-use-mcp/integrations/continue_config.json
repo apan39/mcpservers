@@ -1,0 +1,27 @@
+{
+  "models": [
+    {
+      "title": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "apiKey": "your-anthropic-api-key"
+    }
+  ],
+  "mcpServers": [
+    {
+      "name": "browser-use",
+      "url": "http://localhost:3000",
+      "apiKey": "your-secure-api-key",
+      "description": "Browser automation with AI agents"
+    }
+  ],
+  "contextProviders": [
+    {
+      "name": "browser-use",
+      "params": {
+        "url": "http://localhost:3000",
+        "apiKey": "your-secure-api-key"
+      }
+    }
+  ]
+}
