@@ -114,7 +114,7 @@ def register_coolify_tools(tool_registry):
                     "instant_deploy": {
                         "type": "boolean",
                         "description": "Deploy immediately after creation",
-                        "default": true
+                        "default": True
                     },
                     "base_directory": {
                         "type": "string",

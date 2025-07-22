@@ -5,13 +5,29 @@ MCP Server for stdio transport (Claude Desktop/CLI compatible).
 
 import asyncio
 import logging
+import os
+from pathlib import Path
 from mcp.server.stdio import stdio_server
 from mcp.server.lowlevel import Server
 from mcp.types import Tool, TextContent
 from tools.math_tools import register_math_tools
 from tools.text_tools import register_text_tools
 from tools.crawl4ai_tools import register_crawl4ai_tools
+from tools.coolify_tools import register_coolify_tools
 from utils.logger import setup_logger
+
+# Load environment variables from .env file
+def load_env_file():
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
+load_env_file()
 
 # Set up logging
 logger = setup_logger("mcp_stdio_server", logging.INFO)
@@ -26,6 +42,7 @@ def create_server():
     register_math_tools(tool_registry)
     register_text_tools(tool_registry)
     register_crawl4ai_tools(tool_registry)
+    register_coolify_tools(tool_registry)
     
     @server.list_tools()
     async def list_tools():
@@ -56,9 +73,9 @@ def create_server():
 async def main():
     """Main entry point."""
     server = create_server()
-    async with stdio_server(server) as streams:
+    async with stdio_server(server) as (read_stream, write_stream):
         await server.run(
-            streams[0], streams[1], server.create_initialization_options()
+            read_stream, write_stream, server.create_initialization_options()
         )
 
 
