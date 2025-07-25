@@ -302,8 +302,196 @@ app.use((req, res, next) => {
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 const sseTransports: { [sessionId: string]: SSEServerTransport } = {};
 
-// Main MCP endpoint (StreamableHTTP)
+// Simple MCP endpoint (no session management for basic operations)
 app.post("/mcp", async (req: Request, res: Response) => {
+  try {
+    const { method, params, id } = req.body;
+    
+    console.log(`MCP Request: ${method}`, params);
+
+    if (method === "initialize") {
+      res.json({
+        jsonrpc: "2.0",
+        id,
+        result: {
+          protocolVersion: "2024-11-05",
+          capabilities: {
+            tools: {},
+            logging: {}
+          },
+          serverInfo: {
+            name: "typescript-mcp-server",
+            version: "1.0.0"
+          }
+        }
+      });
+      return;
+    }
+
+    if (method === "notifications/initialized") {
+      res.json({
+        jsonrpc: "2.0",
+        id,
+        result: {}
+      });
+      return;
+    }
+
+    if (method === "tools/list") {
+      res.json({
+        jsonrpc: "2.0",
+        id,
+        result: {
+          tools: [
+            {
+              name: "greet",
+              description: "A simple greeting tool",
+              inputSchema: {
+                type: "object",
+                required: ["name"],
+                properties: {
+                  name: {
+                    type: "string",
+                    description: "Name to greet"
+                  }
+                }
+              }
+            },
+            {
+              name: "multi-greet", 
+              description: "A tool that sends different greetings with delays between them",
+              inputSchema: {
+                type: "object",
+                required: ["name"],
+                properties: {
+                  name: {
+                    type: "string",
+                    description: "Name to greet"
+                  }
+                }
+              }
+            },
+            {
+              name: "scrape-dynamic-url",
+              description: "Scrape text content from a dynamic webpage using Playwright",
+              inputSchema: {
+                type: "object",
+                required: ["url"],
+                properties: {
+                  url: {
+                    type: "string",
+                    format: "uri",
+                    description: "The URL to scrape"
+                  },
+                  waitFor: {
+                    type: "string",
+                    description: "CSS selector to wait for before scraping"
+                  },
+                  timeout: {
+                    type: "number",
+                    minimum: 1000,
+                    maximum: 30000,
+                    default: 10000,
+                    description: "Timeout in milliseconds"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      });
+      return;
+    }
+
+    if (method === "tools/call") {
+      const { name, arguments: args } = params;
+      
+      if (name === "greet") {
+        res.json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Hello, ${args.name}!`
+              }
+            ]
+          }
+        });
+        return;
+      }
+
+      if (name === "multi-greet") {
+        res.json({
+          jsonrpc: "2.0", 
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Good morning, ${args.name}!`
+              }
+            ]
+          }
+        });
+        return;
+      }
+
+      if (name === "scrape-dynamic-url") {
+        // Basic implementation - you can enhance this
+        res.json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Would scrape URL: ${args.url} (Playwright tool not implemented in simplified mode)`
+              }
+            ]
+          }
+        });
+        return;
+      }
+
+      res.status(400).json({
+        jsonrpc: "2.0",
+        id,
+        error: {
+          code: -32601,
+          message: `Unknown tool: ${name}`
+        }
+      });
+      return;
+    }
+
+    res.status(400).json({
+      jsonrpc: "2.0",
+      id,
+      error: {
+        code: -32601,
+        message: `Unknown method: ${method}`
+      }
+    });
+
+  } catch (error) {
+    console.error("Error handling MCP request:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32603,
+          message: "Internal server error",
+        },
+        id: null,
+      });
+    }
+  }
+});
+
+// Complex MCP endpoint with session management (for advanced features)
+app.post("/mcp-advanced", async (req: Request, res: Response) => {
   try {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     let transport: StreamableHTTPServerTransport;
@@ -345,7 +533,7 @@ app.post("/mcp", async (req: Request, res: Response) => {
 
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
-    console.error("Error handling MCP request:", error);
+    console.error("Error handling MCP advanced request:", error);
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: "2.0",

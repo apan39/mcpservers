@@ -170,7 +170,12 @@ async def get_coolify_version() -> list[types.TextContent]:
         response = requests.get(f"{base_url}/version", headers=headers, timeout=30)
         response.raise_for_status()
         
-        result = response.json()
+        # Handle both JSON and plain text responses
+        try:
+            result = response.json()
+        except:
+            result = response.text.strip()
+        
         logger.info("Successfully retrieved Coolify version")
         return [types.TextContent(type="text", text=f"Coolify Version: {result}")]
         

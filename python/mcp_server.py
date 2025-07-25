@@ -1,22 +1,23 @@
+#!/usr/bin/env python3
 """
-MCP Server implementation following MCP standards.
-This server provides math, text, and web crawling tools.
+Simple HTTP MCP Server implementation.
 """
 
 import asyncio
+import json
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List
 
-import mcp.types as types
+import uvicorn
 from mcp.server.lowlevel import Server
-from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
-from starlette.routing import Mount
-from starlette.types import Receive, Scope, Send
-
-from health import add_health_routes
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 from tools.math_tools import register_math_tools
 from tools.text_tools import register_text_tools
@@ -24,99 +25,188 @@ from tools.crawl4ai_tools import register_crawl4ai_tools
 from tools.coolify_tools import register_coolify_tools
 from utils.logger import setup_logger
 
-# Set up logging
-logger = setup_logger("mcp_server", logging.INFO)
+# Load environment variables from .env file
+def load_env_file():
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
 
-class MCPServer:
-    """MCP Server with proper tool registration and error handling."""
-    
-    def __init__(self, server_name: str = "mcp-production-server"):
-        self.server_name = server_name
-        self.tool_registry: Dict[str, Dict[str, Any]] = {}
-        self.app = Server(server_name)
-        self._setup_server()
-    
-    def _setup_server(self):
-        """Set up the MCP server with all tools."""
-        # Register all tools
-        register_math_tools(self.tool_registry)
-        register_text_tools(self.tool_registry)
-        register_crawl4ai_tools(self.tool_registry)
-        register_coolify_tools(self.tool_registry)
+load_env_file()
+
+# Set up logging
+logger = setup_logger("simple_http_server", logging.INFO)
+
+# Global tool registry
+tool_registry = {}
+
+def setup_tools():
+    """Setup all MCP tools."""
+    register_math_tools(tool_registry)
+    register_text_tools(tool_registry)
+    register_crawl4ai_tools(tool_registry)
+    register_coolify_tools(tool_registry)
+
+async def handle_mcp_request(request: Request) -> JSONResponse:
+    """Handle MCP JSON-RPC requests."""
+    try:
+        logger.info(f"Received MCP request: {request.method} {request.url}")
         
-        # Register tools with the server
-        @self.app.list_tools()
-        async def list_tools() -> List[types.Tool]:
-            return [tool_data["definition"] for tool_data in self.tool_registry.values()]
+        # Check authorization header
+        auth_header = request.headers.get('authorization')
+        expected_key = os.getenv('MCP_API_KEY', 'demo-api-key-123')
         
-        @self.app.call_tool()
-        async def call_tool(
-            name: str, 
-            arguments: dict
-        ) -> List[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            if name not in self.tool_registry:
-                raise ValueError(f"Unknown tool: {name}")
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.warning("Missing or invalid Authorization header")
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32001, "message": "Missing or invalid Authorization header"}
+            }, status_code=401)
+        
+        token = auth_header[7:]  # Remove 'Bearer ' prefix
+        if token != expected_key:
+            logger.warning("Invalid API key")
+            return JSONResponse({
+                "jsonrpc": "2.0", 
+                "id": None,
+                "error": {"code": -32001, "message": "Invalid API key"}
+            }, status_code=401)
+        
+        data = await request.json()
+        logger.info(f"Request data: {data}")
+        method = data.get('method')
+        params = data.get('params', {})
+        request_id = data.get('id')
+        
+        if method == 'initialize':
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "serverInfo": {
+                        "name": "python-mcp-tools",
+                        "version": "1.0.0"
+                    }
+                }
+            })
+        
+        elif method == 'notifications/initialized':
+            return JSONResponse({"jsonrpc": "2.0", "id": request_id, "result": {}})
+        
+        elif method == 'tools/list':
+            logger.info(f"Tools registry has {len(tool_registry)} tools")
+            tools = []
+            for name, tool_data in tool_registry.items():
+                try:
+                    tool_def = tool_data["definition"]
+                    # Convert Tool object to dict for JSON serialization
+                    tool_dict = {
+                        "name": tool_def.name,
+                        "description": tool_def.description,
+                        "inputSchema": tool_def.inputSchema
+                    }
+                    tools.append(tool_dict)
+                    logger.info(f"Added tool: {name}")
+                except Exception as e:
+                    logger.error(f"Error processing tool {name}: {e}")
+            
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {"tools": tools}
+            })
+        
+        elif method == 'tools/call':
+            tool_name = params.get('name')
+            arguments = params.get('arguments', {})
+            
+            if tool_name not in tool_registry:
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {"code": -32601, "message": f"Unknown tool: {tool_name}"}
+                })
             
             try:
-                handler = self.tool_registry[name]["handler"]
+                handler = tool_registry[tool_name]["handler"]
                 result = await handler(**arguments)
-                logger.info(f"Successfully executed tool: {name}")
-                return result
+                logger.info(f"Successfully executed tool: {tool_name}")
+                
+                # Convert result to JSON-serializable format
+                if hasattr(result, '__dict__'):
+                    result = [{"type": "text", "text": str(result)}]
+                elif isinstance(result, list):
+                    # Handle list of TextContent objects
+                    json_result = []
+                    for item in result:
+                        if hasattr(item, 'type') and hasattr(item, 'text'):
+                            json_result.append({"type": item.type, "text": item.text})
+                        else:
+                            json_result.append({"type": "text", "text": str(item)})
+                    result = json_result
+                else:
+                    result = [{"type": "text", "text": str(result)}]
+                
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {"content": result}
+                })
+                
             except Exception as e:
-                logger.error(f"Error executing tool {name}: {str(e)}")
-                return [types.TextContent(
-                    type="text", 
-                    text=f"Error executing tool: {str(e)}"
-                )]
+                logger.error(f"Error executing tool {tool_name}: {str(e)}")
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {"code": -32603, "message": f"Tool execution error: {str(e)}"}
+                })
+        
+        else:
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": -32601, "message": f"Unknown method: {method}"}
+            })
     
-    def get_server(self) -> Server:
-        """Get the configured MCP server."""
-        return self.app
+    except Exception as e:
+        logger.error(f"Error handling MCP request: {str(e)}")
+        logger.error(f"Error type: {type(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "id": None,
+            "error": {"code": -32603, "message": f"Internal server error: {str(e)}"}
+        })
 
+async def health_check(request: Request) -> JSONResponse:
+    """Health check endpoint."""
+    return JSONResponse({
+        "status": "healthy",
+        "service": "simple-mcp-http-server"
+    })
 
 def create_app() -> Starlette:
-    """Create the Starlette application with proper middleware and configuration."""
+    """Create the Starlette application."""
+    setup_tools()
     
-    # Initialize MCP server
-    mcp_server = MCPServer()
-    server = mcp_server.get_server()
-    
-    # Create session manager
-    from event_store import InMemoryEventStore
-    event_store = InMemoryEventStore()
-    session_manager = StreamableHTTPSessionManager(
-        app=server,
-        event_store=event_store,
-        json_response=False,
-    )
-    
-    async def handle_mcp_request(scope: Scope, receive: Receive, send: Send) -> None:
-        """Handle MCP requests."""
-        try:
-            await session_manager.handle_request(scope, receive, send)
-        except Exception as e:
-            logger.error(f"Error handling MCP request: {str(e)}")
-            # Send error response
-            await send({
-                'type': 'http.response.start',
-                'status': 500,
-                'headers': [[b'content-type', b'application/json']],
-            })
-            await send({
-                'type': 'http.response.body',
-                'body': b'{"error": "Internal server error"}',
-            })
-    
-    # Create Starlette app
     app = Starlette(
-        debug=False,  # Production setting
+        debug=False,
         routes=[
-            Mount("/mcp", app=handle_mcp_request),
+            Route("/mcp", handle_mcp_request, methods=["POST"]),
+            Route("/mcp/", handle_mcp_request, methods=["POST"]),
+            Route("/health", health_check, methods=["GET"]),
         ],
     )
-    
-    # Add health routes
-    add_health_routes(app)
     
     # Add CORS middleware
     allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else ["*"]
@@ -130,27 +220,16 @@ def create_app() -> Starlette:
     
     return app
 
-
 def main():
-    """CLI entry point for development."""
-    import uvicorn
-    
-    # Get configuration from environment
+    """CLI entry point."""
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "3009"))
     log_level = os.getenv("LOG_LEVEL", "INFO").lower()
     
-    logger.info(f"Starting MCP server on {host}:{port}")
+    logger.info(f"Starting simple HTTP MCP server on {host}:{port}")
     
     app = create_app()
-    uvicorn.run(
-        app, 
-        host=host, 
-        port=port,
-        log_level=log_level,
-        access_log=True
-    )
-
+    uvicorn.run(app, host=host, port=port, log_level=log_level, access_log=True)
 
 if __name__ == "__main__":
     main()

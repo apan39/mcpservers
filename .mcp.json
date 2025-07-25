@@ -1,18 +1,12 @@
 {
   "mcpServers": {
     "python-tools": {
-      "command": "/Users/imac_2/utveckling/mcpservers/python/venv/bin/python",
-      "args": ["/Users/imac_2/utveckling/mcpservers/python/mcp_stdio_server.py"],
-      "env": {
-        "MCP_API_KEY": "demo-api-key-123"
-      }
-    },
-    "typescript-tools": {
-      "command": "node",
-      "args": ["/Users/imac_2/utveckling/mcpservers/typescript/dist/stdio_server.js"],
-      "env": {
-        "MCP_API_KEY": "demo-api-key-123"
-      }
+      "type": "stdio",
+      "command": "/home/johan/Documents/development/mcpservers/python/venv/bin/python",
+      "args": [
+        "/home/johan/Documents/development/mcpservers/python/simple_stdio_server.py"
+      ],
+      "env": {}
     }
   }
 }
