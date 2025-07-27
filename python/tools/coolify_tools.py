@@ -309,6 +309,19 @@ def register_coolify_tools(tool_registry):
         ),
         "handler": deploy_application
     }
+    
+    tool_registry["coolify-get-deployment-info"] = {
+        "definition": types.Tool(
+            name="coolify-get-deployment-info",
+            description="Get the correct server UUID and project information for deployments.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False
+            }
+        ),
+        "handler": get_deployment_info
+    }
 
 def get_coolify_headers():
     """Get headers for Coolify API requests."""
@@ -398,10 +411,14 @@ async def list_coolify_servers() -> list[types.TextContent]:
             for server in servers:
                 name = server.get('name', 'N/A')
                 ip = server.get('ip', 'N/A')
-                status = server.get('status', 'N/A')
-                server_info.append(f"• {name} ({ip}): {status}")
+                uuid = server.get('uuid', 'N/A')
+                is_reachable = server.get('is_reachable', False)
+                is_usable = server.get('is_usable', False)
+                status = "reachable+usable" if (is_reachable and is_usable) else "unavailable"
+                server_info.append(f"• {name} ({ip}) - UUID: {uuid} - Status: {status}")
             
             result = "Servers:\n" + "\n".join(server_info)
+            result += f"\n\n💡 Use UUID 'csgkk88okkgkwg8w0g8og8c8' for deployments (main server)"
         else:
             result = f"Servers: {servers}"
             
@@ -829,3 +846,70 @@ async def deploy_application(app_uuid: str, force: bool = False) -> list[types.T
     except Exception as e:
         logger.error(f"Failed to deploy application {app_uuid}: {e}")
         return [types.TextContent(type="text", text=f"❌ Error deploying application: {e}")]
+
+async def get_deployment_info() -> list[types.TextContent]:
+    """Get the correct server UUID and project information for deployments."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        # Get projects and servers
+        projects_response = requests.get(f"{base_url}/projects", headers=headers, timeout=30)
+        servers_response = requests.get(f"{base_url}/servers", headers=headers, timeout=30)
+        
+        projects_response.raise_for_status()
+        servers_response.raise_for_status()
+        
+        projects = projects_response.json()
+        servers = servers_response.json()
+        
+        result = "🚀 Coolify Deployment Information\n\n"
+        
+        # Server info with correct UUID
+        result += "📡 **Server Information**:\n"
+        if isinstance(servers, list) and servers:
+            main_server = servers[0]  # Usually the first/main server
+            server_uuid = main_server.get('uuid', 'N/A')
+            server_name = main_server.get('name', 'N/A')
+            server_ip = main_server.get('ip', 'N/A')
+            is_usable = main_server.get('is_usable', False)
+            
+            result += f"• Server UUID: `{server_uuid}` ✅\n"
+            result += f"• Name: {server_name} ({server_ip})\n"
+            result += f"• Status: {'✅ Usable' if is_usable else '❌ Not usable'}\n\n"
+        
+        # Project info
+        result += "📁 **Available Projects**:\n"
+        if isinstance(projects, list):
+            for project in projects:
+                name = project.get('name', 'N/A')
+                uuid = project.get('uuid', 'N/A')
+                description = project.get('description', 'No description')
+                result += f"• **{name}**: `{uuid}`\n"
+                if description and description != 'No description':
+                    result += f"  └─ {description}\n"
+            result += "\n"
+        
+        # Deployment template
+        result += "🛠️ **Deployment Template**:\n"
+        result += "```bash\n"
+        result += "coolify-create-github-app \\\n"
+        result += "  --project_uuid \"PROJECT_UUID_FROM_ABOVE\" \\\n"
+        result += f"  --server_uuid \"{server_uuid}\" \\\n"
+        result += "  --git_repository \"https://github.com/username/repo\" \\\n"
+        result += "  --name \"your-app-name\" \\\n"
+        result += "  --git_branch \"main\" \\\n"
+        result += "  --build_pack \"dockerfile\"\n"
+        result += "```\n\n"
+        
+        result += "💡 **Quick Tips**:\n"
+        result += f"• Always use server UUID: `{server_uuid}`\n"
+        result += "• Choose project UUID from the list above\n"
+        result += "• Use `coolify-get-application-info` to monitor deployment\n"
+        
+        logger.info("Successfully retrieved deployment information")
+        return [types.TextContent(type="text", text=result)]
+        
+    except Exception as e:
+        logger.error(f"Failed to get deployment info: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error getting deployment info: {e}")]
