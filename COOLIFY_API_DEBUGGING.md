@@ -153,10 +153,24 @@ for log in logs:
 ```
 
 **Common Health Check Issues:**
-- Missing commands in container (`pgrep: not found`, `curl: not found`)
-- Wrong port or endpoint
-- Health check timeout too short
-- Start period too short for application warmup
+- **Missing commands in container** (`pgrep: not found`, `curl: not found`)
+  - Fix: Add required commands to Dockerfile (e.g., `RUN apt-get install -y curl`)
+- **Wrong port or endpoint**
+  - Fix: Verify HEALTHCHECK in Dockerfile matches actual application port
+- **Health check timeout too short**
+  - Fix: Increase timeout in Dockerfile HEALTHCHECK directive
+- **Start period too short for application warmup**
+  - Fix: Increase --start-period in HEALTHCHECK directive
+
+**Real Example - Browser-Use MCP Health Check Fix:**
+```dockerfile
+# Problem: curl: not found
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Solution: Install curl in Dockerfile
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+```
 
 ### Issue 4: Runtime Logs When Application Crashes
 

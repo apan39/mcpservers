@@ -63,13 +63,15 @@ curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3010/mcp
 This repository is successfully deployed and operational using Coolify API integration:
 
 1. **Project**: "mcpservers" project (`l8cog4c48w48kckkcgos8cwg`)
-2. **Services Status**: ✅ Both services are `running:healthy`
+2. **Services Status**: ✅ All three services are `running:healthy`
    - **Python MCP Server**: UUID `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009) - **12 tools available**
    - **TypeScript MCP Server**: UUID `k8wco488444c8gw0sscs04k8` (Port 3010) - **3 tools available**
+   - **Browser-Use MCP Server**: UUID `w8wcwg48ok4go8g8swgwkgk8` (Port 3000) - **6 browser automation tools**
 
 **Live URLs:**
 - **Python Server**: `http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp`
 - **TypeScript Server**: `http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp`
+- **Browser-Use Server**: `http://w8wcwg48ok4go8g8swgwkgk8.135.181.149.150.sslip.io/mcp`
 - **Authentication**: `Authorization: Bearer <your-secure-token>`
 
 **Recent Security Updates:**
@@ -168,6 +170,20 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${MCP
 
 - **Web Scraping Tools**
   - `scrape-dynamic-url` - Scrape dynamic web pages using Playwright
+
+### Browser-Use Server (Port 3000)
+
+- **Browser Session Management**
+  - `create_browser_session` - Create new browser sessions for automation
+  - `close_browser_session` - Close browser sessions and cleanup resources
+  - `list_browser_sessions` - List all active browser sessions
+
+- **Browser Navigation & Content**
+  - `navigate_to_url` - Navigate to specific URLs in the browser
+  - `get_page_content` - Extract content from the current page
+
+- **AI Browser Automation**
+  - `execute_browser_task` - Execute complex browser tasks using AI agent
 
 ## API Usage
 
