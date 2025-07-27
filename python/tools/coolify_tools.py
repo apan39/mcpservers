@@ -186,6 +186,129 @@ def register_coolify_tools(tool_registry):
         ),
         "handler": get_application_info
     }
+    
+    tool_registry["coolify-restart-application"] = {
+        "definition": types.Tool(
+            name="coolify-restart-application",
+            description="Restart an application in Coolify.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to restart"
+                    }
+                }
+            }
+        ),
+        "handler": restart_application
+    }
+    
+    tool_registry["coolify-stop-application"] = {
+        "definition": types.Tool(
+            name="coolify-stop-application",
+            description="Stop an application in Coolify.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to stop"
+                    }
+                }
+            }
+        ),
+        "handler": stop_application
+    }
+    
+    tool_registry["coolify-start-application"] = {
+        "definition": types.Tool(
+            name="coolify-start-application",
+            description="Start an application in Coolify.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to start"
+                    }
+                }
+            }
+        ),
+        "handler": start_application
+    }
+    
+    tool_registry["coolify-delete-application"] = {
+        "definition": types.Tool(
+            name="coolify-delete-application",
+            description="Delete an application in Coolify.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to delete"
+                    },
+                    "confirm": {
+                        "type": "boolean",
+                        "description": "Confirmation that you want to delete the application",
+                        "default": False
+                    }
+                }
+            }
+        ),
+        "handler": delete_application
+    }
+    
+    tool_registry["coolify-get-application-logs"] = {
+        "definition": types.Tool(
+            name="coolify-get-application-logs",
+            description="Get runtime logs for an application.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to get logs for"
+                    },
+                    "lines": {
+                        "type": "integer",
+                        "description": "Number of recent log lines to show",
+                        "default": 100
+                    }
+                }
+            }
+        ),
+        "handler": get_application_logs
+    }
+    
+    tool_registry["coolify-deploy-application"] = {
+        "definition": types.Tool(
+            name="coolify-deploy-application",
+            description="Trigger a deployment for an existing application.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to deploy"
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Force deployment even if no changes detected",
+                        "default": False
+                    }
+                }
+            }
+        ),
+        "handler": deploy_application
+    }
 
 def get_coolify_headers():
     """Get headers for Coolify API requests."""
@@ -535,3 +658,174 @@ Dockerfile Location: {dockerfile_location}
     except Exception as e:
         logger.error(f"Failed to get application info for {app_uuid}: {e}")
         return [types.TextContent(type="text", text=f"Error getting application info: {e}")]
+
+async def restart_application(app_uuid: str) -> list[types.TextContent]:
+    """Restart an application in Coolify."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.post(f"{base_url}/applications/{app_uuid}/restart", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        result_data = response.json()
+        message = result_data.get('message', 'Application restart initiated')
+        
+        logger.info(f"Successfully restarted application {app_uuid}")
+        return [types.TextContent(type="text", text=f"✅ {message}")]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to restart application {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"❌ Failed to restart application: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to restart application {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error restarting application: {e}")]
+
+async def stop_application(app_uuid: str) -> list[types.TextContent]:
+    """Stop an application in Coolify."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.post(f"{base_url}/applications/{app_uuid}/stop", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        result_data = response.json()
+        message = result_data.get('message', 'Application stop initiated')
+        
+        logger.info(f"Successfully stopped application {app_uuid}")
+        return [types.TextContent(type="text", text=f"⏹️ {message}")]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to stop application {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"❌ Failed to stop application: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to stop application {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error stopping application: {e}")]
+
+async def start_application(app_uuid: str) -> list[types.TextContent]:
+    """Start an application in Coolify."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.post(f"{base_url}/applications/{app_uuid}/start", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        result_data = response.json()
+        message = result_data.get('message', 'Application start initiated')
+        
+        logger.info(f"Successfully started application {app_uuid}")
+        return [types.TextContent(type="text", text=f"▶️ {message}")]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to start application {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"❌ Failed to start application: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to start application {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error starting application: {e}")]
+
+async def delete_application(app_uuid: str, confirm: bool = False) -> list[types.TextContent]:
+    """Delete an application in Coolify."""
+    if not confirm:
+        return [types.TextContent(type="text", text="⚠️ Application deletion requires confirmation. Set 'confirm' parameter to true to proceed.")]
+    
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.delete(f"{base_url}/applications/{app_uuid}", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        logger.info(f"Successfully deleted application {app_uuid}")
+        return [types.TextContent(type="text", text=f"🗑️ Application {app_uuid} has been deleted successfully")]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to delete application {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"❌ Failed to delete application: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to delete application {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error deleting application: {e}")]
+
+async def get_application_logs(app_uuid: str, lines: int = 100) -> list[types.TextContent]:
+    """Get runtime logs for an application."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        # Try to get application logs - this endpoint may vary depending on Coolify version
+        response = requests.get(f"{base_url}/applications/{app_uuid}/logs", headers=headers, timeout=30)
+        
+        if response.status_code == 404:
+            # Try alternative endpoint structure
+            response = requests.get(f"{base_url}/applications/{app_uuid}/containers/logs", headers=headers, timeout=30)
+        
+        response.raise_for_status()
+        
+        # Handle different response formats
+        if response.headers.get('content-type', '').startswith('application/json'):
+            logs_data = response.json()
+            if isinstance(logs_data, list):
+                recent_logs = logs_data[-lines:] if lines > 0 else logs_data
+                result = "\n".join([log.get('message', str(log)) for log in recent_logs])
+            else:
+                result = str(logs_data)
+        else:
+            # Plain text logs
+            log_lines = response.text.split('\n')
+            recent_logs = log_lines[-lines:] if lines > 0 else log_lines
+            result = '\n'.join(recent_logs)
+        
+        logger.info(f"Successfully retrieved logs for application {app_uuid}")
+        return [types.TextContent(type="text", text=f"📋 Application Logs ({lines} lines):\n\n{result}")]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to get logs for application {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"❌ Failed to get application logs: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to get logs for application {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error getting application logs: {e}")]
+
+async def deploy_application(app_uuid: str, force: bool = False) -> list[types.TextContent]:
+    """Trigger a deployment for an existing application."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        payload = {"uuid": app_uuid}
+        if force:
+            payload["force"] = True
+        
+        response = requests.post(f"{base_url}/deploy", headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        
+        result_data = response.json()
+        deployment_uuid = None
+        
+        if 'deployments' in result_data and result_data['deployments']:
+            deployment_info = result_data['deployments'][0]
+            deployment_uuid = deployment_info.get('deployment_uuid')
+            message = deployment_info.get('message', 'Deployment queued')
+            
+            result = f"🚀 {message}"
+            if deployment_uuid:
+                result += f"\nDeployment UUID: {deployment_uuid}"
+                result += f"\n\nUse 'coolify-get-deployment-logs' with UUID '{deployment_uuid}' to monitor progress."
+        else:
+            result = f"🚀 Deployment initiated for application {app_uuid}"
+        
+        logger.info(f"Successfully triggered deployment for application {app_uuid}")
+        return [types.TextContent(type="text", text=result)]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to deploy application {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"❌ Failed to deploy application: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to deploy application {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Error deploying application: {e}")]

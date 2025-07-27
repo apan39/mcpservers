@@ -64,7 +64,7 @@ This repository is successfully deployed and operational using Coolify API integ
 
 1. **Project**: "mcpservers" project (`l8cog4c48w48kckkcgos8cwg`)
 2. **Services Status**: ✅ All three services are `running:healthy`
-   - **Python MCP Server**: UUID `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009) - **12 tools available**
+   - **Python MCP Server**: UUID `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009) - **19 tools available** (includes complete Coolify API suite)
    - **TypeScript MCP Server**: UUID `k8wco488444c8gw0sscs04k8` (Port 3010) - **3 tools available**
    - **Browser-Use MCP Server**: UUID `w8wcwg48ok4go8g8swgwkgk8` (Port 3000) - **6 browser automation tools**
 
@@ -155,12 +155,23 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${MCP
 - **Web Scraping Tools**
   - `crawl-url` - Extract text from web pages using BeautifulSoup
 
-- **🚀 Coolify API Tools**
-  - `coolify-get-version` - Get Coolify instance version
-  - `coolify-list-projects` - List all Coolify projects
-  - `coolify-list-servers` - List all Coolify servers
-  - `coolify-list-applications` - List applications in a project
-  - `coolify-create-github-app` - **Deploy GitHub repositories to Coolify**
+- **🚀 Coolify API Tools** (Complete Management Suite)
+  - **Information & Discovery**
+    - `coolify-get-version` - Get Coolify instance version
+    - `coolify-list-projects` - List all Coolify projects
+    - `coolify-list-servers` - List all Coolify servers
+    - `coolify-list-applications` - List applications in a project
+    - `coolify-get-application-info` - Get detailed application info and status
+  - **Application Lifecycle Management**
+    - `coolify-create-github-app` - **Deploy GitHub repositories to Coolify**
+    - `coolify-deploy-application` - Trigger deployment for existing applications
+    - `coolify-start-application` - Start stopped applications
+    - `coolify-stop-application` - Stop running applications
+    - `coolify-restart-application` - Restart applications
+    - `coolify-delete-application` - Delete applications (with confirmation)
+  - **Monitoring & Debugging**
+    - `coolify-get-deployment-logs` - Get deployment logs by UUID
+    - `coolify-get-application-logs` - Get runtime application logs
 
 ### TypeScript Server (Port 3010)
 
