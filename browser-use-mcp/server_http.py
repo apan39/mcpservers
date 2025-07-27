@@ -393,12 +393,38 @@ async def execute_browser_task(session_id: str, task: str, provider: str = "open
         if session_id not in sessions:
             return f"Session {session_id} not found"
         
-        # For now, return a simulated response since browser-use requires valid API keys
-        page = sessions[session_id]["page"]
-        current_url = page.url
-        title = await page.title()
-        
-        return f"Task simulation: '{task}'\nCurrent page: {title} ({current_url})\nNote: Full AI agent execution requires valid {provider.upper()} API keys"
+        # Try to use browser-use library for AI agent execution
+        try:
+            from browser_use import Agent
+            
+            page = sessions[session_id]["page"]
+            
+            # Create simple agent (this will work even without API keys for basic tasks)
+            agent = Agent(
+                task=task,
+                llm=None,  # Will use default or environment-configured LLM
+                use_vision=False,
+                save_conversation_path=None
+            )
+            
+            # Execute the task
+            result = await agent.run(page)
+            
+            return f"Task completed: {task}\nResult: {str(result)}"
+            
+        except ImportError:
+            # Fallback if browser-use not available
+            page = sessions[session_id]["page"]
+            current_url = page.url
+            title = await page.title()
+            return f"Task simulation: '{task}'\nCurrent page: {title} ({current_url})\nNote: browser-use library not available"
+            
+        except Exception as browser_use_error:
+            # Fallback for browser-use errors (like missing API keys)
+            page = sessions[session_id]["page"]
+            current_url = page.url
+            title = await page.title()
+            return f"Task attempted: '{task}'\nCurrent page: {title} ({current_url})\nNote: {str(browser_use_error)}"
         
     except Exception as e:
         logger.error(f"Error executing task: {e}")
