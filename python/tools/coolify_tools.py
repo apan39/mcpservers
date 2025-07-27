@@ -145,6 +145,47 @@ def register_coolify_tools(tool_registry):
         ),
         "handler": create_github_application
     }
+    
+    tool_registry["coolify-get-deployment-logs"] = {
+        "definition": types.Tool(
+            name="coolify-get-deployment-logs",
+            description="Get deployment logs and status for a specific deployment UUID.",
+            inputSchema={
+                "type": "object",
+                "required": ["deployment_uuid"],
+                "properties": {
+                    "deployment_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the deployment to get logs for"
+                    },
+                    "lines": {
+                        "type": "integer",
+                        "description": "Number of recent log lines to show (default: 50)",
+                        "default": 50
+                    }
+                }
+            }
+        ),
+        "handler": get_deployment_logs
+    }
+    
+    tool_registry["coolify-get-application-info"] = {
+        "definition": types.Tool(
+            name="coolify-get-application-info",
+            description="Get detailed application information and status by application UUID.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to get information for"
+                    }
+                }
+            }
+        ),
+        "handler": get_application_info
+    }
 
 def get_coolify_headers():
     """Get headers for Coolify API requests."""
@@ -360,3 +401,137 @@ The application will be deployed automatically if instant_deploy is enabled."""
     except Exception as e:
         logger.error(f"Failed to create application {name}: {e}")
         return [types.TextContent(type="text", text=f"Error creating application: {e}")]
+
+async def get_deployment_logs(deployment_uuid: str, lines: int = 50) -> list[types.TextContent]:
+    """Get deployment logs and status for a specific deployment UUID."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.get(f"{base_url}/deployments/{deployment_uuid}", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        deployment_data = response.json()
+        logger.info(f"Successfully retrieved deployment data for {deployment_uuid}")
+        
+        # Extract basic deployment info
+        status = deployment_data.get('status', 'N/A')
+        started_at = deployment_data.get('started_at', 'N/A')
+        finished_at = deployment_data.get('finished_at', 'N/A')
+        
+        result = f"""Deployment UUID: {deployment_uuid}
+Status: {status}
+Started At: {started_at}
+Finished At: {finished_at}
+
+=== DEPLOYMENT LOGS ===
+"""
+        
+        # Process logs
+        logs_data = deployment_data.get('logs', [])
+        if isinstance(logs_data, str):
+            # If logs are stored as JSON string, parse them
+            import json
+            try:
+                logs_data = json.loads(logs_data)
+            except:
+                result += f"Raw logs: {logs_data}"
+                return [types.TextContent(type="text", text=result)]
+        
+        if isinstance(logs_data, list):
+            # Get the last N lines
+            recent_logs = logs_data[-lines:] if lines > 0 else logs_data
+            
+            for log_entry in recent_logs:
+                if isinstance(log_entry, dict):
+                    output = log_entry.get('output', '')
+                    log_type = log_entry.get('type', 'INFO')
+                    hidden = log_entry.get('hidden', False)
+                    
+                    # Skip hidden logs unless they contain important error info
+                    if hidden and not any(keyword in output.lower() for keyword in ['error', 'fail', 'exception', 'unhealthy']):
+                        continue
+                    
+                    if output.strip():
+                        result += f"{log_type.upper()}: {output}\n"
+                else:
+                    result += f"LOG: {log_entry}\n"
+        else:
+            result += f"Logs data: {logs_data}"
+        
+        return [types.TextContent(type="text", text=result)]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to get deployment logs for {deployment_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"Failed to get deployment logs: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to get deployment logs for {deployment_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"Error getting deployment logs: {e}")]
+
+async def get_application_info(app_uuid: str) -> list[types.TextContent]:
+    """Get detailed application information and status by application UUID."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.get(f"{base_url}/applications/{app_uuid}", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        app_data = response.json()
+        logger.info(f"Successfully retrieved application data for {app_uuid}")
+        
+        # Extract key application information
+        name = app_data.get('name', 'N/A')
+        status = app_data.get('status', 'N/A')
+        build_pack = app_data.get('build_pack', 'N/A')
+        last_online_at = app_data.get('last_online_at', 'N/A')
+        git_repository = app_data.get('git_repository', 'N/A')
+        git_branch = app_data.get('git_branch', 'N/A')
+        start_command = app_data.get('start_command', 'N/A')
+        dockerfile_location = app_data.get('dockerfile_location', 'N/A')
+        
+        result = f"""Application Information:
+Name: {name}
+UUID: {app_uuid}
+Status: {status}
+Build Pack: {build_pack}
+Last Online At: {last_online_at}
+
+Repository Information:
+Git Repository: {git_repository}
+Git Branch: {git_branch}
+
+Configuration:
+Start Command: {start_command}
+Dockerfile Location: {dockerfile_location}
+"""
+        
+        # Try to get environment variables
+        try:
+            env_response = requests.get(f"{base_url}/applications/{app_uuid}/envs", headers=headers, timeout=30)
+            if env_response.status_code == 200:
+                env_vars = env_response.json()
+                result += f"\nEnvironment Variables:\n"
+                if env_vars and isinstance(env_vars, list):
+                    for env_var in env_vars:
+                        key = env_var.get('key', 'N/A')
+                        value = env_var.get('value', 'N/A')
+                        # Mask sensitive values
+                        if any(sensitive in key.lower() for sensitive in ['token', 'key', 'secret', 'password']):
+                            value = '***MASKED***'
+                        result += f"  {key}: {value}\n"
+                else:
+                    result += "  No environment variables set\n"
+        except Exception as env_error:
+            result += f"\nEnvironment Variables: Error retrieving ({env_error})\n"
+        
+        return [types.TextContent(type="text", text=result)]
+        
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Failed to get application info for {app_uuid}: {error_msg}")
+        return [types.TextContent(type="text", text=f"Failed to get application info: {error_msg}")]
+    except Exception as e:
+        logger.error(f"Failed to get application info for {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"Error getting application info: {e}")]
