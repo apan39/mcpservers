@@ -19,10 +19,13 @@ This repository contains production-ready MCP (Model Context Protocol) servers w
 1. **Environment Variables** - Copy `.env.example` to `.env` and configure:
    ```bash
    cp .env.example .env
+   
+   # Generate a secure API key
+   openssl rand -hex 32
    ```
    
    **Required variables:**
-   - `MCP_API_KEY` - Strong API key for authentication
+   - `MCP_API_KEY` - Cryptographically secure API key (generate with `openssl rand -hex 32`)
    
    **Coolify Integration (Optional):**
    - `COOLIFY_BASE_URL` - Your Coolify instance URL (e.g., https://coolify.example.com)
@@ -53,16 +56,29 @@ curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3009/mcp
 curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3010/mcp
 ```
 
-### 2. Coolify Deployment
+### 2. Coolify Deployment - WORKING! ✅
 
-**🚀 Automated Coolify API Deployment**
+**🚀 Live Production Deployment**
 
-This repository has been deployed using the Coolify API integration:
+This repository is successfully deployed and operational using Coolify API integration:
 
-1. **Project Created**: "mcpservers" project (`l8cog4c48w48kckkcgos8cwg`)
-2. **Services Deployed**:
-   - **Python MCP Server**: UUID `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009)
-   - **TypeScript MCP Server**: UUID `k8wco488444c8gw0sscs04k8` (Port 3010)
+1. **Project**: "mcpservers" project (`l8cog4c48w48kckkcgos8cwg`)
+2. **Services Status**: ✅ Both services are `running:healthy`
+   - **Python MCP Server**: UUID `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009) - **12 tools available**
+   - **TypeScript MCP Server**: UUID `k8wco488444c8gw0sscs04k8` (Port 3010) - **3 tools available**
+
+**Live URLs:**
+- **Python Server**: `http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp`
+- **TypeScript Server**: `http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp`
+- **Authentication**: `Authorization: Bearer <your-secure-token>`
+
+**Recent Security Updates:**
+- ✅ **Secure Token Implementation** - Generated cryptographically secure API keys
+- ✅ **Environment Variable Protection** - Removed hardcoded demo tokens
+- ✅ **Production Token Deployment** - Updated Coolify environment variables
+- ✅ **Bearer token authentication** - Proper authentication middleware 
+- ✅ **Simplified MCP protocol** - Removed session complexity for reliability
+- ✅ **Enhanced error handling** - Comprehensive logging and monitoring
 
 **Manual Deployment (Alternative)**
 
@@ -81,7 +97,7 @@ If you want to deploy manually:
 2. **Environment Configuration**
    Set these environment variables for the Python service:
    ```
-   MCP_API_KEY=your-secure-api-key-here
+   MCP_API_KEY=<generated-with-openssl-rand-hex-32>
    COOLIFY_BASE_URL=http://your-coolify-instance.com:8000
    COOLIFY_API_TOKEN=your-coolify-api-token
    LOG_LEVEL=INFO
@@ -91,24 +107,34 @@ If you want to deploy manually:
    - Both services will build and deploy automatically
    - Monitor logs for successful startup
 
-### 3. Production Verification
+### 3. Production Verification - VERIFIED! ✅
 
-After deployment, verify the services using the Coolify-assigned URLs:
+The services are verified and working:
 
 ```bash
-# Health checks (get URLs from Coolify dashboard)
-curl https://your-python-app.coolify-domain.com/health
-curl https://your-typescript-app.coolify-domain.com/health
+# Health checks - WORKING ✅
+curl http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/health
+# Returns: {"status":"healthy","timestamp":"2025-07-25T20:59:30.713240","service":"mcp-python-server"}
 
-# Test authentication
-curl -H "Authorization: Bearer YOUR_API_KEY" https://your-python-app.coolify-domain.com/mcp
+curl http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/health  
+# Returns: {"status":"ok","timestamp":"2025-07-25T20:59:32.094Z"}
+
+# Test MCP initialization - WORKING ✅
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${MCP_API_KEY}" \
+     -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}' \
+     http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp
+
+# Test tools list - WORKING ✅
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${MCP_API_KEY}" \
+     -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 2, "params": {}}' \
+     http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp
 ```
 
-**Finding Your URLs:**
-- Go to your Coolify dashboard
-- Navigate to the "mcpservers" project
-- Check both applications for their assigned domains
-- Use these URLs to connect Claude Desktop/CLI
+**✅ Production Status:**
+- **Python Server**: 12 tools including Coolify API, math, text, web scraping
+- **TypeScript Server**: 3 tools including greet, multi-greet, scrape-dynamic-url
+- **Authentication**: Bearer token working correctly
+- **MCP Protocol**: Full initialize → tools/list → tools/call flow verified
 
 ## Available Tools
 
@@ -194,8 +220,9 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ## Security Best Practices
 
 1. **API Keys**
-   - Use strong, randomly generated API keys
-   - Rotate keys regularly
+   - Generate cryptographically secure API keys with `openssl rand -hex 32`
+   - Use environment variables (never hardcode tokens)
+   - Rotate keys regularly in production
    - Never commit keys to version control
 
 2. **Network Security**

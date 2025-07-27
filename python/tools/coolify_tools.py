@@ -135,6 +135,10 @@ def register_coolify_tools(tool_registry):
                     "start_command": {
                         "type": "string",
                         "description": "Custom start command"
+                    },
+                    "ports_exposes": {
+                        "type": "string",
+                        "description": "Port to expose (e.g., '3000')"
                     }
                 }
             }
@@ -288,6 +292,7 @@ async def create_github_application(
     install_command: str = None,
     build_command: str = None,
     start_command: str = None,
+    ports_exposes: str = None,
     **kwargs
 ) -> list[types.TextContent]:
     """Create a new application from a GitHub repository."""
@@ -320,6 +325,8 @@ async def create_github_application(
             payload["build_command"] = build_command
         if start_command:
             payload["start_command"] = start_command
+        if ports_exposes:
+            payload["ports_exposes"] = ports_exposes
         
         logger.info(f"Creating application {name} from {git_repository}")
         

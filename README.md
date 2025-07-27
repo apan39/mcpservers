@@ -5,7 +5,9 @@ This repository contains production-ready MCP (Model Context Protocol) servers i
 ## 🌟 Key Features
 
 - ✅ **Production-Ready Security** - Bearer token auth, rate limiting, CORS protection
+- ✅ **Local + Remote Architecture** - Every server available both locally (stdio) and remotely (http)
 - ✅ **Coolify Integration** - Deploy GitHub repos directly through MCP tools
+- ✅ **Browser Automation** - Full browser automation with browser-use-mcp
 - ✅ **Multi-Language Support** - Python and TypeScript servers
 - ✅ **Web Scraping Tools** - Both simple and Playwright-based dynamic scraping
 - ✅ **Math & Text Processing** - Comprehensive utility tools
@@ -33,13 +35,18 @@ This repository contains production-ready MCP (Model Context Protocol) servers i
 │   │   └── coolify_tools.py  # 🚀 Coolify API integration
 │   └── utils/
 │       └── logger.py
-└── typescript/               # TypeScript MCP server
-    ├── Dockerfile
-    ├── package.json
-    ├── tsconfig.json
-    └── src/
-        ├── server.ts         # Main server implementation
-        └── playwrightTools.ts # Playwright web scraping tools
+├── typescript/               # TypeScript MCP server
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── server.ts         # Main server implementation
+│       └── playwrightTools.ts # Playwright web scraping tools
+└── browser-use-mcp/         # Browser automation MCP server
+    ├── server_stdio.py      # STDIO server for local use
+    ├── server.py           # HTTP server for remote deployment
+    ├── requirements.txt
+    └── integrations/       # Integration configurations
 ```
 
 ## Quick Start
@@ -50,8 +57,11 @@ This repository contains production-ready MCP (Model Context Protocol) servers i
 # Copy environment template
 cp .env.example .env
 
+# Generate a secure API key
+openssl rand -hex 32
+
 # Edit .env with your secure credentials
-# Required: MCP_API_KEY
+# Required: MCP_API_KEY=<your-generated-secure-token>
 # Optional: COOLIFY_BASE_URL, COOLIFY_API_TOKEN (for Coolify integration)
 ```
 
@@ -82,6 +92,9 @@ claude mcp add --transport http python-tools http://localhost:3009/mcp
 
 # Add TypeScript server (Playwright tools)  
 claude mcp add --transport http typescript-tools http://localhost:3010/mcp
+
+# Add Browser Use MCP server (Browser automation)
+claude mcp add --transport stdio browser-use-mcp python3 /path/to/browser-use-mcp/server_stdio.py
 ```
 
 ### 4. Local Development
@@ -109,28 +122,37 @@ For detailed production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMEN
 
 ### Coolify Deployment Summary
 
-**🚀 Live Deployment Available!**
+**🚀 Live Deployment - WORKING!**
 
-This project is deployed as separate services on Coolify:
-- **Python MCP Server**: Includes Coolify API integration, math, text, and web tools
-- **TypeScript MCP Server**: Playwright-based dynamic web scraping
+Both servers are successfully deployed and operational on Coolify:
+- **Python MCP Server**: ✅ `running:healthy` - Full Coolify API integration, math, text, and web tools
+- **TypeScript MCP Server**: ✅ `running:healthy` - Simplified MCP protocol with basic tools
 
-**Deployment Process:**
-1. **Create Project**: New "mcpservers" project created via Coolify API
-2. **Deploy Services**: Separate Nixpacks deployments for Python and TypeScript
-3. **Configure Environment**: Set API keys and Coolify integration variables
-4. **Access Globally**: Connect Claude Desktop/CLI to production URLs
+**Live URLs:**
+- **Python Server**: `http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp`
+- **TypeScript Server**: `http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp`
+
+**Authentication:** Secure Bearer token required (`Authorization: Bearer <your-secure-token>`)
 
 **Service Details:**
-- Python Server UUID: `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009)
-- TypeScript Server UUID: `k8wco488444c8gw0sscs04k8` (Port 3010)
+- Python Server UUID: `zs8sk0cgs4s8gsgwswsg88ko` (Port 3009) - 12 tools available
+- TypeScript Server UUID: `k8wco488444c8gw0sscs04k8` (Port 3010) - 3 tools available  
 - Project UUID: `l8cog4c48w48kckkcgos8cwg`
+
+**Recent Fixes Applied:**
+- ✅ Added proper authentication middleware to Python server
+- ✅ Simplified TypeScript server MCP protocol (removed complex session management)
+- ✅ Fixed route handling for both `/mcp` and `/mcp/` endpoints
+- ✅ Enhanced error handling and logging
+- ✅ Verified deployment process with git commit/push workflow
 
 > 💡 **Meta Feature**: Once deployed, you can use the Coolify integration tools to deploy *other* GitHub repositories from anywhere!
 
 ## Security Features
 
-- ✅ **Bearer Token Authentication** - Secure API access
+- ✅ **Bearer Token Authentication** - Cryptographically secure API tokens
+- ✅ **Environment Variable Protection** - No hardcoded secrets
+- ✅ **Secure Token Generation** - 64-character hex tokens
 - ✅ **Rate Limiting** - 100 requests per 15 minutes per IP
 - ✅ **CORS Protection** - Configurable allowed origins
 - ✅ **Input Validation** - All tool inputs validated

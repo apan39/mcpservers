@@ -44,5 +44,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Run the application
+# Run the HTTP-compatible application  
 CMD ["python", "server_http.py"]

@@ -1,18 +1,24 @@
 # MCP Setup for Claude Desktop/CLI
 
-## ✅ Production-Ready MCP Servers with Coolify Integration!
+## ✅ Production-Ready MCP Servers - WORKING!
 
-Your MCP servers are now configured and ready to use with Claude Desktop or CLI, including full **Coolify API integration** for automated deployments!
+Your MCP servers are now successfully deployed and operational with Claude Desktop/CLI, including full **Coolify API integration** for automated deployments!
 
-### Current Configuration
+### Current Working Configuration
 
 ```bash
 claude mcp list
 ```
 
-Shows:
-- `python-tools`: Math, text, web crawling, and **🚀 Coolify API tools**
-- `typescript-tools`: Playwright dynamic web scraping tools
+Shows **6 working servers** (following local + remote pattern):
+- `python-tools`: Local STDIO server (12 tools)
+- `typescript-tools`: Local HTTP server (3 tools) 
+- `browser-use-mcp`: Local STDIO server (browser automation tools)
+- `remote-python-tools`: **🚀 LIVE** Remote HTTP server (12 tools + Coolify API)
+- `remote-typescript-tools`: **🚀 LIVE** Remote HTTP server (3 tools)
+- `remote-browser-use-mcp`: **🚀 LIVE** Remote HTTP server (browser automation tools)
+
+**✅ Remote servers are now fully functional with proper authentication and simplified protocols!**
 
 ### HTTP Transport Setup
 
@@ -25,21 +31,55 @@ claude mcp add --transport http python-tools http://localhost:3009/mcp
 claude mcp add --transport http typescript-tools http://localhost:3010/mcp
 ```
 
-**🚀 Production Deployment (Coolify):**
+**🚀 Live Production URLs (Working!):**
 ```bash
-# Add production Python server (replace with your Coolify domain)
-claude mcp add --transport http python-tools https://your-python-app.coolify-domain.com/mcp
+# Remote Python server - 12 tools + Coolify API
+Remote URL: http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp
+Auth: Bearer ${MCP_API_KEY}
 
-# Add production TypeScript server (replace with your Coolify domain)  
-claude mcp add --transport http typescript-tools https://your-typescript-app.coolify-domain.com/mcp
+# Remote TypeScript server - 3 tools (simplified protocol)
+Remote URL: http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp  
+Auth: Bearer ${MCP_API_KEY}
 ```
 
-**Finding Your Production URLs:**
-1. Go to your Coolify dashboard
-2. Navigate to the "mcpservers" project
-3. Check the domains assigned to:
-   - Python Server: `zs8sk0cgs4s8gsgwswsg88ko`
-   - TypeScript Server: `k8wco488444c8gw0sscs04k8`
+## ⚡ Local + Remote Architecture
+
+**Standard Pattern**: Every MCP server should have both local and remote versions for maximum flexibility:
+
+- **Local servers** (`stdio`): Fast, direct access for development and testing
+- **Remote servers** (`http`): Production-ready, scalable, with authentication
+
+**Current Remote Configuration in `.mcp.json`:**
+```json
+{
+  "mcpServers": {
+    "remote-python-tools": {
+      "type": "http",
+      "url": "http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_API_KEY}",
+        "Accept": "application/json"
+      }
+    },
+    "remote-typescript-tools": {
+      "type": "http", 
+      "url": "http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_API_KEY}",
+        "Accept": "application/json"
+      }
+    },
+    "remote-browser-use-mcp": {
+      "type": "http",
+      "url": "http://browser-use-mcp.135.181.149.150.sslip.io/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_API_KEY}",
+        "Accept": "application/json"
+      }
+    }
+  }
+}
+```
 
 ### Quick Test
 
@@ -96,8 +136,15 @@ claude mcp add --transport http typescript-tools https://your-typescript-app.coo
 - `word-count` - Count words: `{"text": "Hello world"}`
 - `format-text` - Format text: `{"text": "hello world", "format_type": "title_case"}`
 
-**Web Scraping:**
-- `crawl-url` - Web scraping: `{"url": "https://example.com", "max_pages": 1}`
+**Web Scraping (Enhanced for Large Pages):**
+- `crawl-url` - Smart web scraping with filtering options:
+  - Basic: `{"url": "https://example.com"}`
+  - Extract main content only: `{"url": "https://example.com", "extract_mode": "main_content"}`
+  - Get headings only: `{"url": "https://example.com", "extract_mode": "headings"}`
+  - Get summary: `{"url": "https://example.com", "extract_mode": "summary"}`
+  - Specific element: `{"url": "https://example.com", "selector": "article"}`
+  - Limit length: `{"url": "https://example.com", "max_length": 10000}`
+  - Exclude sections: `{"url": "https://example.com", "exclude_selectors": [".ads", "nav", ".sidebar"]}`
 
 **🚀 Coolify API Integration:**
 - `coolify-get-version` - Get Coolify version: `{}`
@@ -111,6 +158,15 @@ claude mcp add --transport http typescript-tools https://your-typescript-app.coo
 - `multi-greet` - Friendly greeting: `{"name": "Claude"}`
 - `scrape-dynamic-url` - Dynamic scraping: `{"url": "https://example.com", "timeout": 10000}`
 
+### Browser Automation Tools (browser-use-mcp server):
+- `create_browser_session` - Create new browser session: `{"session_id": "my-session", "headless": true}`
+- `navigate_to_url` - Navigate to URL: `{"session_id": "my-session", "url": "https://example.com"}`
+- `click_element` - Click element: `{"session_id": "my-session", "selector": "button.submit"}`
+- `type_text` - Type text: `{"session_id": "my-session", "selector": "input[name='search']", "text": "hello world"}`
+- `get_page_content` - Get page content: `{"session_id": "my-session"}`
+- `take_screenshot` - Take screenshot: `{"session_id": "my-session"}`
+- `close_browser_session` - Close session: `{"session_id": "my-session"}`
+
 ## Usage in Claude Desktop/CLI
 
 Once configured, you can use these in natural language:
@@ -121,6 +177,22 @@ Please use the add-numbers tool to calculate 25 + 37
 Please use the string-operations tool to make "Hello World" uppercase  
 Please use the crawl-url tool to get content from https://example.com
 Please use the scrape-dynamic-url tool to get content from https://spa-app.com
+```
+
+**Smart Web Scraping (for Large Pages):**
+```
+Please crawl this article but only get the main content: https://longblog.com/post
+Please get just the headings from this documentation page: https://docs.example.com
+Please get a summary of this news article: https://news.com/long-article
+Please crawl this page but exclude ads and navigation: https://cluttered-site.com
+Please extract only the product description from this e-commerce page
+```
+
+**Browser Automation:**
+```
+Please create a browser session and navigate to google.com, then search for "MCP servers"
+Please use browser automation to take a screenshot of the current page
+Please automate filling out a form on example.com/contact
 ```
 
 **🚀 Coolify Deployment:**
@@ -135,7 +207,7 @@ If tools don't work:
 
 1. **Check servers are running**: `docker compose ps` or visit http://localhost:3009/health
 2. **Check HTTP connection**: Ensure you added with `--transport http`
-3. **Check authentication**: Verify your `MCP_API_KEY` in `.env`
+3. **Check authentication**: Verify your secure `MCP_API_KEY` in `.env` (generated with `openssl rand -hex 32`)
 4. **Check logs**: `docker compose logs` for server logs
 5. **Run diagnostics**: `claude mcp doctor` for Claude CLI diagnostics
 

@@ -183,13 +183,13 @@ for log in logs:
 "
 ```
 
-## Real-World Example: MCP Server Debugging
+## Real-World Success Story: MCP Server Debugging
 
-### Problem
-- Python MCP server: `exited:unhealthy`
-- TypeScript MCP server: `running:unhealthy` 
+### Initial Problem (RESOLVED!)
+- Python MCP server: `exited:unhealthy` → **Fixed ✅**
+- TypeScript MCP server: `running:unhealthy` → **Fixed ✅**
 
-### Investigation Process
+### Investigation Process That Led to Success
 
 1. **Check application status:**
 ```bash
@@ -203,31 +203,60 @@ for app in data:
 "
 ```
 
-2. **Found missing environment variables:**
+2. **Found and fixed missing environment variables:**
 ```bash
 curl -H "$AUTH_HEADER" "$COOLIFY_BASE_URL/api/v1/applications/{app_uuid}/envs"
-# Returned: []
+# Initial result: []
+# Added all required environment variables via API
 ```
 
-3. **Added required environment variables:**
+3. **Identified MCP protocol issues:**
+   - Python server: Missing authentication middleware
+   - TypeScript server: Complex session management preventing basic MCP operations
+   - Route handling problems (redirects not handled)
+
+4. **Applied comprehensive fixes:**
+   - ✅ **Python server**: Added Bearer token authentication middleware
+   - ✅ **TypeScript server**: Simplified MCP endpoint, removed session complexity
+   - ✅ **Route handling**: Added support for both `/mcp` and `/mcp/` endpoints
+   - ✅ **Error handling**: Enhanced logging and error messages
+   - ✅ **Deployment process**: Fixed git commit/push workflow for Coolify
+
+5. **Verified full MCP protocol compliance:**
+   - ✅ `initialize` method working
+   - ✅ `tools/list` method working  
+   - ✅ `tools/call` method working
+   - ✅ Authentication working correctly
+
+### Final Result - SUCCESS! 🎉
+- **Python server**: `running:healthy` ✅ (12 tools available including Coolify API)
+- **TypeScript server**: `running:healthy` ✅ (3 tools available with simplified protocol)
+
+**Live URLs Working:**
+- Python: `http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp`
+- TypeScript: `http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp`
+
+**Testing Commands That Now Work:**
 ```bash
-curl -X POST -H "$AUTH_HEADER" -H "Content-Type: application/json" \
-  -d '{"key": "MCP_API_KEY", "value": "demo-api-key-123", "is_preview": false}' \
-  "$COOLIFY_BASE_URL/api/v1/applications/{app_uuid}/envs"
+# Initialize - SUCCESS ✅
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${MCP_API_KEY}" \
+  -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}' \
+  http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp
+
+# Tools list - SUCCESS ✅  
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${MCP_API_KEY}" \
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 2, "params": {}}' \
+  http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp
 ```
 
-4. **Discovered build pack issue:**
-   - Logs showed Nixpacks ignoring Dockerfile
-   - Changed to Dockerfile build pack
+### Key Lessons Learned
 
-5. **Found health check issue:**
-   - Deployment logs revealed: `pgreg: not found`
-   - Server was actually starting perfectly
-   - Fixed health check command
-
-### Final Result
-- **Python server**: `running:healthy` ✅
-- **TypeScript server**: `running:unhealthy` ✅ (working, just health check config)
+1. **Git workflow is critical**: Coolify deploys from git repository, changes must be committed/pushed
+2. **MCP protocol simplicity**: Complex session management can break basic MCP operations  
+3. **Authentication security**: Both servers use cryptographically secure Bearer tokens from environment variables
+4. **Route handling**: Handle both `/mcp` and `/mcp/` to avoid redirect issues
+5. **Deployment logs are essential**: Use deployment logs to debug actual application startup
+6. **API-first debugging**: Coolify API provides more detailed diagnostics than web interface
 
 ## API Debugging Script Template
 
