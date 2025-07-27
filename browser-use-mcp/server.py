@@ -26,11 +26,6 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 
 from browser_use import Agent, Browser, BrowserConfig
-from browser_use.dom.service import DOMService
-from browser_use.browser.service import BrowserService
-from browser_use.agent.service import AgentService
-from browser_use.agent.views import AgentHistoryList, ActionResult
-from browser_use.controller.service import Controller
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +72,33 @@ def create_app(port: int = 3000):
     
     # Register browser control tools
     register_browser_tools(tool_registry)
+    
+    # Register navigation tools
+    register_navigation_tools(tool_registry)
+    
+    # Register interaction tools
+    register_interaction_tools(tool_registry)
+    
+    # Register content tools
+    register_content_tools(tool_registry)
+    
+    # Register tab management tools
+    register_tab_management_tools(tool_registry)
+    
+    # Register file operation tools
+    register_file_operation_tools(tool_registry)
+    
+    # Register javascript tools
+    register_javascript_tools(tool_registry)
+    
+    # Register waiting tools
+    register_waiting_tools(tool_registry)
+    
+    # Register visual tools
+    register_visual_tools(tool_registry)
+    
+    # Register state management tools
+    register_state_management_tools(tool_registry)
     
     # Register agent tools
     register_agent_tools(tool_registry)
@@ -779,6 +801,1219 @@ async def get_session_info(session_id: str) -> list[types.TextContent]:
             type="text",
             text=f"Error getting session info: {str(e)}"
         )]
+
+
+def register_navigation_tools(tool_registry: Dict[str, Any]):
+    """Register navigation tools."""
+    
+    # Go back
+    tool_registry["go_back"] = {
+        "definition": types.Tool(
+            name="go_back",
+            description="Navigate back in browser history",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": go_back
+    }
+    
+    # Go forward
+    tool_registry["go_forward"] = {
+        "definition": types.Tool(
+            name="go_forward",
+            description="Navigate forward in browser history",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": go_forward
+    }
+    
+    # Refresh page
+    tool_registry["refresh_page"] = {
+        "definition": types.Tool(
+            name="refresh_page",
+            description="Refresh the current page",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": refresh_page
+    }
+
+
+def register_interaction_tools(tool_registry: Dict[str, Any]):
+    """Register interaction tools."""
+    
+    # Click element
+    tool_registry["click_element"] = {
+        "definition": types.Tool(
+            name="click_element",
+            description="Click on an element using selector",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector or XPath for the element"
+                    },
+                    "selector_type": {
+                        "type": "string",
+                        "enum": ["css", "xpath", "text", "id"],
+                        "description": "Type of selector",
+                        "default": "css"
+                    },
+                    "wait_timeout": {
+                        "type": "integer",
+                        "description": "Timeout in milliseconds to wait for element",
+                        "default": 5000
+                    }
+                },
+                "required": ["session_id", "selector"]
+            }
+        ),
+        "handler": click_element
+    }
+    
+    # Input text
+    tool_registry["input_text"] = {
+        "definition": types.Tool(
+            name="input_text",
+            description="Type text into an input field",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector for the input field"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Text to type"
+                    },
+                    "clear_first": {
+                        "type": "boolean",
+                        "description": "Clear field before typing",
+                        "default": True
+                    },
+                    "press_enter": {
+                        "type": "boolean",
+                        "description": "Press Enter after typing",
+                        "default": False
+                    }
+                },
+                "required": ["session_id", "selector", "text"]
+            }
+        ),
+        "handler": input_text
+    }
+    
+    # Scroll
+    tool_registry["scroll"] = {
+        "definition": types.Tool(
+            name="scroll",
+            description="Scroll the page in specified direction",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": ["up", "down", "left", "right"],
+                        "description": "Scroll direction",
+                        "default": "down"
+                    },
+                    "amount": {
+                        "type": "integer",
+                        "description": "Amount to scroll in pixels",
+                        "default": 500
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": scroll
+    }
+    
+    # Send keys
+    tool_registry["send_keys"] = {
+        "definition": types.Tool(
+            name="send_keys",
+            description="Send keyboard keys (e.g., Tab, Enter, Escape)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "keys": {
+                        "type": "string",
+                        "description": "Keys to send (e.g., 'Tab', 'Enter', 'Escape', 'Control+a')"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "Optional selector to focus before sending keys"
+                    }
+                },
+                "required": ["session_id", "keys"]
+            }
+        ),
+        "handler": send_keys
+    }
+
+
+def register_content_tools(tool_registry: Dict[str, Any]):
+    """Register content extraction tools."""
+    
+    # Extract content
+    tool_registry["extract_content"] = {
+        "definition": types.Tool(
+            name="extract_content",
+            description="Extract specific content from the page",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector for content to extract"
+                    },
+                    "attribute": {
+                        "type": "string",
+                        "description": "Attribute to extract (e.g., 'text', 'href', 'src')",
+                        "default": "text"
+                    },
+                    "all_matches": {
+                        "type": "boolean",
+                        "description": "Extract all matching elements",
+                        "default": False
+                    }
+                },
+                "required": ["session_id", "selector"]
+            }
+        ),
+        "handler": extract_content
+    }
+    
+    # Get page HTML
+    tool_registry["get_page_html"] = {
+        "definition": types.Tool(
+            name="get_page_html",
+            description="Get the HTML content of the current page",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "Optional selector to get HTML for specific element"
+                    },
+                    "outer_html": {
+                        "type": "boolean",
+                        "description": "Get outer HTML instead of inner HTML",
+                        "default": False
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": get_page_html
+    }
+
+
+def register_tab_management_tools(tool_registry: Dict[str, Any]):
+    """Register tab management tools."""
+    
+    # Create new tab
+    tool_registry["create_tab"] = {
+        "definition": types.Tool(
+            name="create_tab",
+            description="Create a new browser tab",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "Optional URL to navigate to in new tab"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": create_tab
+    }
+    
+    # List tabs
+    tool_registry["list_tabs"] = {
+        "definition": types.Tool(
+            name="list_tabs",
+            description="List all open tabs in the browser session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": list_tabs
+    }
+    
+    # Switch tab
+    tool_registry["switch_tab"] = {
+        "definition": types.Tool(
+            name="switch_tab",
+            description="Switch to a specific tab",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "tab_index": {
+                        "type": "integer",
+                        "description": "Tab index to switch to (0-based)"
+                    }
+                },
+                "required": ["session_id", "tab_index"]
+            }
+        ),
+        "handler": switch_tab
+    }
+    
+    # Close tab
+    tool_registry["close_tab"] = {
+        "definition": types.Tool(
+            name="close_tab",
+            description="Close the current tab or a specific tab",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "tab_index": {
+                        "type": "integer",
+                        "description": "Optional tab index to close (0-based). If not provided, closes current tab"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": close_tab
+    }
+
+
+def register_file_operation_tools(tool_registry: Dict[str, Any]):
+    """Register file operation tools."""
+    
+    # Upload file
+    tool_registry["upload_file"] = {
+        "definition": types.Tool(
+            name="upload_file",
+            description="Upload a file using a file input element",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector for the file input element"
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file to upload"
+                    }
+                },
+                "required": ["session_id", "selector", "file_path"]
+            }
+        ),
+        "handler": upload_file
+    }
+    
+    # Download file
+    tool_registry["download_file"] = {
+        "definition": types.Tool(
+            name="download_file",
+            description="Download a file by clicking a download link",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector for the download link/button"
+                    },
+                    "download_path": {
+                        "type": "string",
+                        "description": "Optional path to save the downloaded file"
+                    }
+                },
+                "required": ["session_id", "selector"]
+            }
+        ),
+        "handler": download_file
+    }
+
+
+def register_javascript_tools(tool_registry: Dict[str, Any]):
+    """Register JavaScript execution tools."""
+    
+    # Execute JavaScript
+    tool_registry["execute_javascript"] = {
+        "definition": types.Tool(
+            name="execute_javascript",
+            description="Execute JavaScript code on the page",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "JavaScript code to execute"
+                    },
+                    "return_result": {
+                        "type": "boolean",
+                        "description": "Whether to return the result of the execution",
+                        "default": True
+                    }
+                },
+                "required": ["session_id", "code"]
+            }
+        ),
+        "handler": execute_javascript
+    }
+
+
+def register_waiting_tools(tool_registry: Dict[str, Any]):
+    """Register waiting tools."""
+    
+    # Wait for element
+    tool_registry["wait_for_element"] = {
+        "definition": types.Tool(
+            name="wait_for_element",
+            description="Wait for an element to appear on the page",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector for the element to wait for"
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Timeout in milliseconds",
+                        "default": 10000
+                    },
+                    "state": {
+                        "type": "string",
+                        "enum": ["attached", "detached", "visible", "hidden"],
+                        "description": "Element state to wait for",
+                        "default": "visible"
+                    }
+                },
+                "required": ["session_id", "selector"]
+            }
+        ),
+        "handler": wait_for_element
+    }
+    
+    # Wait for load
+    tool_registry["wait_for_load"] = {
+        "definition": types.Tool(
+            name="wait_for_load",
+            description="Wait for page to finish loading",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Timeout in milliseconds",
+                        "default": 30000
+                    },
+                    "wait_until": {
+                        "type": "string",
+                        "enum": ["load", "domcontentloaded", "networkidle"],
+                        "description": "Load state to wait for",
+                        "default": "load"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": wait_for_load
+    }
+
+
+def register_visual_tools(tool_registry: Dict[str, Any]):
+    """Register visual tools."""
+    
+    # Take screenshot (enhanced)
+    tool_registry["take_screenshot"] = {
+        "definition": types.Tool(
+            name="take_screenshot",
+            description="Take a screenshot of the page or specific element",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "Optional CSS selector for element to screenshot"
+                    },
+                    "full_page": {
+                        "type": "boolean",
+                        "description": "Take full page screenshot",
+                        "default": False
+                    },
+                    "save_path": {
+                        "type": "string",
+                        "description": "Optional path to save screenshot"
+                    },
+                    "quality": {
+                        "type": "integer",
+                        "description": "JPEG quality (0-100)",
+                        "default": 90
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": take_screenshot
+    }
+
+
+def register_state_management_tools(tool_registry: Dict[str, Any]):
+    """Register state management tools."""
+    
+    # Get browser state
+    tool_registry["get_browser_state"] = {
+        "definition": types.Tool(
+            name="get_browser_state",
+            description="Get comprehensive browser state information",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "include_dom": {
+                        "type": "boolean",
+                        "description": "Include DOM structure in response",
+                        "default": False
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": get_browser_state
+    }
+    
+    # Get DOM elements
+    tool_registry["get_dom_elements"] = {
+        "definition": types.Tool(
+            name="get_dom_elements",
+            description="Get clickable and interactive DOM elements",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Browser session ID"
+                    },
+                    "highlight": {
+                        "type": "boolean",
+                        "description": "Highlight elements on the page",
+                        "default": True
+                    },
+                    "element_types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by element types (e.g., ['button', 'input', 'link'])"
+                    }
+                },
+                "required": ["session_id"]
+            }
+        ),
+        "handler": get_dom_elements
+    }
+
+
+# Tool handler implementations for new tools
+
+async def go_back(session_id: str) -> list[types.TextContent]:
+    """Go back in browser history."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        await page.go_back()
+        
+        return [types.TextContent(type="text", text="Successfully navigated back")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error going back: {str(e)}")]
+
+
+async def go_forward(session_id: str) -> list[types.TextContent]:
+    """Go forward in browser history."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        await page.go_forward()
+        
+        return [types.TextContent(type="text", text="Successfully navigated forward")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error going forward: {str(e)}")]
+
+
+async def refresh_page(session_id: str) -> list[types.TextContent]:
+    """Refresh the current page."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        await page.reload()
+        
+        return [types.TextContent(type="text", text="Page refreshed successfully")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error refreshing page: {str(e)}")]
+
+
+async def click_element(
+    session_id: str,
+    selector: str,
+    selector_type: str = "css",
+    wait_timeout: int = 5000
+) -> list[types.TextContent]:
+    """Click on an element."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        # Wait for element and click
+        if selector_type == "xpath":
+            await page.wait_for_selector(f"xpath={selector}", timeout=wait_timeout)
+            await page.click(f"xpath={selector}")
+        elif selector_type == "text":
+            await page.click(f"text={selector}")
+        elif selector_type == "id":
+            await page.click(f"#{selector}")
+        else:  # css
+            await page.wait_for_selector(selector, timeout=wait_timeout)
+            await page.click(selector)
+        
+        return [types.TextContent(type="text", text=f"Successfully clicked element: {selector}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error clicking element: {str(e)}")]
+
+
+async def input_text(
+    session_id: str,
+    selector: str,
+    text: str,
+    clear_first: bool = True,
+    press_enter: bool = False
+) -> list[types.TextContent]:
+    """Input text into a field."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        if clear_first:
+            await page.fill(selector, text)
+        else:
+            await page.type(selector, text)
+        
+        if press_enter:
+            await page.press(selector, "Enter")
+        
+        return [types.TextContent(type="text", text=f"Successfully entered text into: {selector}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error entering text: {str(e)}")]
+
+
+async def scroll(
+    session_id: str,
+    direction: str = "down",
+    amount: int = 500
+) -> list[types.TextContent]:
+    """Scroll the page."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        if direction == "down":
+            await page.mouse.wheel(0, amount)
+        elif direction == "up":
+            await page.mouse.wheel(0, -amount)
+        elif direction == "right":
+            await page.mouse.wheel(amount, 0)
+        elif direction == "left":
+            await page.mouse.wheel(-amount, 0)
+        
+        return [types.TextContent(type="text", text=f"Scrolled {direction} by {amount}px")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error scrolling: {str(e)}")]
+
+
+async def send_keys(
+    session_id: str,
+    keys: str,
+    selector: Optional[str] = None
+) -> list[types.TextContent]:
+    """Send keyboard keys."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        if selector:
+            await page.press(selector, keys)
+        else:
+            await page.keyboard.press(keys)
+        
+        return [types.TextContent(type="text", text=f"Successfully sent keys: {keys}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error sending keys: {str(e)}")]
+
+
+async def extract_content(
+    session_id: str,
+    selector: str,
+    attribute: str = "text",
+    all_matches: bool = False
+) -> list[types.TextContent]:
+    """Extract content from elements."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        if all_matches:
+            if attribute == "text":
+                content = await page.locator(selector).all_text_contents()
+            else:
+                content = await page.locator(selector).get_attribute(attribute)
+        else:
+            if attribute == "text":
+                content = await page.locator(selector).text_content()
+            else:
+                content = await page.locator(selector).get_attribute(attribute)
+        
+        return [types.TextContent(type="text", text=str(content))]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error extracting content: {str(e)}")]
+
+
+async def get_page_html(
+    session_id: str,
+    selector: Optional[str] = None,
+    outer_html: bool = False
+) -> list[types.TextContent]:
+    """Get HTML content."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        if selector:
+            if outer_html:
+                html = await page.locator(selector).evaluate("el => el.outerHTML")
+            else:
+                html = await page.locator(selector).inner_html()
+        else:
+            html = await page.content()
+        
+        return [types.TextContent(type="text", text=html)]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error getting HTML: {str(e)}")]
+
+
+async def create_tab(
+    session_id: str,
+    url: Optional[str] = None
+) -> list[types.TextContent]:
+    """Create a new tab."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        context = await browser.new_context()
+        page = await context.new_page()
+        
+        if url:
+            await page.goto(url)
+        
+        return [types.TextContent(type="text", text=f"Created new tab{' and navigated to ' + url if url else ''}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error creating tab: {str(e)}")]
+
+
+async def list_tabs(session_id: str) -> list[types.TextContent]:
+    """List all tabs."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        contexts = browser.contexts
+        
+        tabs_info = []
+        for i, context in enumerate(contexts):
+            pages = context.pages
+            for j, page in enumerate(pages):
+                tabs_info.append({
+                    "context_index": i,
+                    "page_index": j,
+                    "url": page.url,
+                    "title": await page.title()
+                })
+        
+        return [types.TextContent(type="text", text=json.dumps(tabs_info, indent=2))]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error listing tabs: {str(e)}")]
+
+
+async def switch_tab(
+    session_id: str,
+    tab_index: int
+) -> list[types.TextContent]:
+    """Switch to a specific tab."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        contexts = browser.contexts
+        
+        # Simple implementation - switch to page in first context
+        if contexts and len(contexts[0].pages) > tab_index:
+            page = contexts[0].pages[tab_index]
+            await page.bring_to_front()
+            return [types.TextContent(type="text", text=f"Switched to tab {tab_index}")]
+        else:
+            return [types.TextContent(type="text", text=f"Tab {tab_index} not found")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error switching tab: {str(e)}")]
+
+
+async def close_tab(
+    session_id: str,
+    tab_index: Optional[int] = None
+) -> list[types.TextContent]:
+    """Close a tab."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        
+        if tab_index is not None:
+            contexts = browser.contexts
+            if contexts and len(contexts[0].pages) > tab_index:
+                await contexts[0].pages[tab_index].close()
+                return [types.TextContent(type="text", text=f"Closed tab {tab_index}")]
+            else:
+                return [types.TextContent(type="text", text=f"Tab {tab_index} not found")]
+        else:
+            page = await browser.get_current_page()
+            await page.close()
+            return [types.TextContent(type="text", text="Closed current tab")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error closing tab: {str(e)}")]
+
+
+async def upload_file(
+    session_id: str,
+    selector: str,
+    file_path: str
+) -> list[types.TextContent]:
+    """Upload a file."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        await page.set_input_files(selector, file_path)
+        
+        return [types.TextContent(type="text", text=f"Successfully uploaded file: {file_path}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error uploading file: {str(e)}")]
+
+
+async def download_file(
+    session_id: str,
+    selector: str,
+    download_path: Optional[str] = None
+) -> list[types.TextContent]:
+    """Download a file."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        # Start waiting for download before clicking
+        async with page.expect_download() as download_info:
+            await page.click(selector)
+        download = await download_info.value
+        
+        if download_path:
+            await download.save_as(download_path)
+            return [types.TextContent(type="text", text=f"Downloaded file to: {download_path}")]
+        else:
+            return [types.TextContent(type="text", text=f"Downloaded file: {download.suggested_filename}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error downloading file: {str(e)}")]
+
+
+async def execute_javascript(
+    session_id: str,
+    code: str,
+    return_result: bool = True
+) -> list[types.TextContent]:
+    """Execute JavaScript code."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        if return_result:
+            result = await page.evaluate(code)
+            return [types.TextContent(type="text", text=str(result))]
+        else:
+            await page.evaluate(code)
+            return [types.TextContent(type="text", text="JavaScript executed successfully")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error executing JavaScript: {str(e)}")]
+
+
+async def wait_for_element(
+    session_id: str,
+    selector: str,
+    timeout: int = 10000,
+    state: str = "visible"
+) -> list[types.TextContent]:
+    """Wait for an element."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        await page.wait_for_selector(selector, timeout=timeout, state=state)
+        
+        return [types.TextContent(type="text", text=f"Element {selector} is now {state}")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error waiting for element: {str(e)}")]
+
+
+async def wait_for_load(
+    session_id: str,
+    timeout: int = 30000,
+    wait_until: str = "load"
+) -> list[types.TextContent]:
+    """Wait for page to load."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        await page.wait_for_load_state(wait_until, timeout=timeout)
+        
+        return [types.TextContent(type="text", text=f"Page loaded ({wait_until})")]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error waiting for load: {str(e)}")]
+
+
+async def take_screenshot(
+    session_id: str,
+    selector: Optional[str] = None,
+    full_page: bool = False,
+    save_path: Optional[str] = None,
+    quality: int = 90
+) -> list[types.TextContent]:
+    """Take a screenshot."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        screenshot_options = {
+            "full_page": full_page,
+            "quality": quality,
+            "type": "jpeg" if quality < 100 else "png"
+        }
+        
+        if save_path:
+            screenshot_options["path"] = save_path
+        
+        if selector:
+            element = page.locator(selector)
+            screenshot = await element.screenshot(**screenshot_options)
+        else:
+            screenshot = await page.screenshot(**screenshot_options)
+        
+        if save_path:
+            return [types.TextContent(type="text", text=f"Screenshot saved to: {save_path}")]
+        else:
+            import base64
+            screenshot_b64 = base64.b64encode(screenshot).decode()
+            return [types.TextContent(type="text", text=screenshot_b64)]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error taking screenshot: {str(e)}")]
+
+
+async def get_browser_state(
+    session_id: str,
+    include_dom: bool = False
+) -> list[types.TextContent]:
+    """Get browser state."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        state = {
+            "url": page.url,
+            "title": await page.title(),
+            "ready_state": await page.evaluate("document.readyState"),
+            "viewport": page.viewport_size,
+            "cookies": await page.context.cookies(),
+        }
+        
+        if include_dom:
+            # Get basic DOM information
+            try:
+                # Get all interactive elements
+                elements = await page.evaluate("""
+                    () => {
+                        const clickable = document.querySelectorAll('a, button, input, select, textarea, [onclick], [role="button"]');
+                        return Array.from(clickable).slice(0, 50).map((el, i) => ({
+                            index: i,
+                            tag: el.tagName.toLowerCase(),
+                            type: el.type || '',
+                            text: el.textContent?.trim().slice(0, 100) || '',
+                            id: el.id || '',
+                            class: el.className || ''
+                        }));
+                    }
+                """)
+                state["interactive_elements"] = elements
+            except Exception as e:
+                state["interactive_elements"] = f"Error getting elements: {str(e)}"
+        
+        return [types.TextContent(type="text", text=json.dumps(state, indent=2, default=str))]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error getting browser state: {str(e)}")]
+
+
+async def get_dom_elements(
+    session_id: str,
+    highlight: bool = True,
+    element_types: Optional[List[str]] = None
+) -> list[types.TextContent]:
+    """Get DOM elements."""
+    if session_id not in browser_manager:
+        return [types.TextContent(type="text", text=f"Session {session_id} not found")]
+    
+    try:
+        browser = browser_manager[session_id]["browser"]
+        page = await browser.get_current_page()
+        
+        # Get DOM elements using JavaScript evaluation
+        elements = await page.evaluate("""
+            () => {
+                const all_elements = document.querySelectorAll('*');
+                const interactive = [];
+                
+                all_elements.forEach((el, i) => {
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    
+                    // Check if element is interactive and visible
+                    const isClickable = el.tagName.match(/^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/) || 
+                                       el.onclick || 
+                                       el.getAttribute('role') === 'button' ||
+                                       style.cursor === 'pointer';
+                    
+                    const isVisible = style.display !== 'none' && 
+                                     style.visibility !== 'hidden' && 
+                                     rect.width > 0 && rect.height > 0;
+                    
+                    if (isClickable && isVisible && interactive.length < 100) {
+                        interactive.push({
+                            index: interactive.length,
+                            tag: el.tagName.toLowerCase(),
+                            type: el.type || '',
+                            text: (el.textContent || el.value || el.placeholder || '').trim().slice(0, 100),
+                            id: el.id || '',
+                            class: Array.from(el.classList).join(' '),
+                            selector: `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className ? '.' + Array.from(el.classList).join('.') : ''}`,
+                            position: {
+                                x: Math.round(rect.left),
+                                y: Math.round(rect.top),
+                                width: Math.round(rect.width),
+                                height: Math.round(rect.height)
+                            }
+                        });
+                    }
+                });
+                
+                return {
+                    interactive_elements: interactive,
+                    total_elements: all_elements.length,
+                    page_title: document.title,
+                    page_url: window.location.href
+                };
+            }
+        """)
+        
+        # Add highlighting if requested
+        if highlight:
+            await page.evaluate("""
+                () => {
+                    // Remove existing highlights
+                    document.querySelectorAll('.mcp-highlight').forEach(el => el.remove());
+                    
+                    // Add highlights to interactive elements
+                    const clickable = document.querySelectorAll('a, button, input, select, textarea, [onclick], [role="button"]');
+                    clickable.forEach((el, i) => {
+                        if (i < 50) {  // Limit to first 50 elements
+                            const highlight = document.createElement('div');
+                            const rect = el.getBoundingClientRect();
+                            highlight.className = 'mcp-highlight';
+                            highlight.style.cssText = `
+                                position: fixed;
+                                top: ${rect.top}px;
+                                left: ${rect.left}px;
+                                width: ${rect.width}px;
+                                height: ${rect.height}px;
+                                border: 2px solid red;
+                                background: rgba(255, 0, 0, 0.1);
+                                pointer-events: none;
+                                z-index: 10000;
+                                box-sizing: border-box;
+                            `;
+                            document.body.appendChild(highlight);
+                        }
+                    });
+                    
+                    // Remove highlights after 3 seconds
+                    setTimeout(() => {
+                        document.querySelectorAll('.mcp-highlight').forEach(el => el.remove());
+                    }, 3000);
+                }
+            """)
+        
+        return [types.TextContent(type="text", text=json.dumps(elements, indent=2))]
+    except Exception as e:
+        return [types.TextContent(type="text", text=f"Error getting DOM elements: {str(e)}")]
 
 
 def configure_llm(provider: str, model_name: Optional[str], temperature: float):
