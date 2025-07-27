@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Browser-Use MCP HTTP Server implementation following the same pattern as other MCP servers.
+Updated to trigger deployment - using JSON-RPC protocol instead of SSE.
 """
 
 import asyncio
