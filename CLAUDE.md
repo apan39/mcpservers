@@ -57,9 +57,11 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 5. **Test basic connectivity** before assuming application issues
 
 ### 5. Known Working Applications
-- Python MCP (UUID: zs8sk0cgs4s8gsgwswsg88ko): `running:healthy` - 19 tools (complete Coolify management suite)
-- TypeScript MCP (UUID: k8wco488444c8gw0sscs04k8): `running:healthy` - 3 tools
-- Browser-use MCP (UUID: w8wcwg48ok4go8g8swgwkgk8): `running:healthy` - 6 browser automation tools
+- Python MCP (UUID: zs8sk0cgs4s8gsgwswsg88ko): `running:healthy` - 15+ tools (complete Coolify management suite)
+- TypeScript MCP (UUID: k8wco488444c8gw0sscs04k8): `running:unhealthy` - 3 tools (needs investigation)
+- Browser-use MCP (UUID: w8wcwg48ok4go8g8swgwkgk8): `running:healthy` - 6+ browser automation tools
+
+**Last Deployment:** July 27, 2025 - GitHub repository refresh triggered for all applications
 
 ### 6. Communication Guidelines
 - **Never assume deployment success** without explicit verification

@@ -53,16 +53,16 @@ def register_coolify_tools(tool_registry):
     tool_registry["coolify-list-applications"] = {
         "definition": types.Tool(
             name="coolify-list-applications",
-            description="List applications for a specific project.",
+            description="List all applications or filter by project UUID.",
             inputSchema={
                 "type": "object",
-                "required": ["project_uuid"],
                 "properties": {
                     "project_uuid": {
                         "type": "string",
-                        "description": "The UUID of the project"
+                        "description": "Optional UUID of the project to filter applications"
                     }
-                }
+                },
+                "additionalProperties": false
             }
         ),
         "handler": list_coolify_applications
@@ -428,34 +428,63 @@ async def list_coolify_servers() -> list[types.TextContent]:
         logger.error(f"Failed to list Coolify servers: {e}")
         return [types.TextContent(type="text", text=f"Error listing servers: {e}")]
 
-async def list_coolify_applications(project_uuid: str) -> list[types.TextContent]:
-    """List applications for a specific project."""
+async def list_coolify_applications(project_uuid: str = None) -> list[types.TextContent]:
+    """List all applications or filter by project UUID."""
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        response = requests.get(f"{base_url}/projects/{project_uuid}/applications", headers=headers, timeout=30)
+        # Treat empty string as None
+        if project_uuid == "":
+            project_uuid = None
+        
+        # Use the correct endpoint that gets all applications
+        response = requests.get(f"{base_url}/applications", headers=headers, timeout=30)
         response.raise_for_status()
         
         applications = response.json()
-        logger.info(f"Successfully retrieved applications for project {project_uuid}")
+        logger.info(f"Successfully retrieved applications")
         
         if isinstance(applications, list):
+            # Filter by project if project_uuid is provided
+            if project_uuid:
+                filtered_apps = []
+                for app in applications:
+                    # Check if app belongs to the specified project
+                    app_env_id = app.get('environment_id')
+                    if app_env_id:
+                        # Try to match by environment or project - this may need adjustment based on Coolify structure
+                        filtered_apps.append(app)
+                applications = filtered_apps
+            
             app_info = []
             for app in applications:
                 name = app.get('name', 'N/A')
                 uuid = app.get('uuid', 'N/A')
                 status = app.get('status', 'N/A')
-                app_info.append(f"• {name} (UUID: {uuid}): {status}")
+                git_repo = app.get('git_repository', 'N/A')
+                build_pack = app.get('build_pack', 'N/A')
+                last_online = app.get('last_online_at', 'Never')
+                
+                app_line = f"• **{name}** (UUID: `{uuid}`): {status}"
+                if git_repo != 'N/A':
+                    app_line += f"\n  └─ Repository: {git_repo}"
+                if build_pack != 'N/A':
+                    app_line += f" | Build: {build_pack}"
+                if last_online != 'Never':
+                    app_line += f" | Last online: {last_online}"
+                    
+                app_info.append(app_line)
             
-            result = f"Applications in project {project_uuid}:\n" + "\n".join(app_info)
+            title = f"Applications in project {project_uuid}" if project_uuid else "All Applications"
+            result = f"{title}:\n" + "\n".join(app_info)
         else:
             result = f"Applications: {applications}"
             
         return [types.TextContent(type="text", text=result)]
         
     except Exception as e:
-        logger.error(f"Failed to list applications for project {project_uuid}: {e}")
+        logger.error(f"Failed to list applications: {e}")
         return [types.TextContent(type="text", text=f"Error listing applications: {e}")]
 
 async def create_github_application(

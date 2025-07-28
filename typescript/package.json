@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "@octokit/rest": "^21.0.2",
     "@types/cors": "^2.8.17",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
