@@ -32,7 +32,16 @@ This repository contains production-ready MCP (Model Context Protocol) servers i
 │   │   ├── math_tools.py    # Math operations
 │   │   ├── text_tools.py    # Text processing
 │   │   ├── crawl4ai_tools.py # Web scraping (requests + BeautifulSoup)
-│   │   └── coolify_tools.py  # 🚀 Coolify API integration
+│   │   └── coolify_tools/   # 🚀 Coolify API integration (modular package)
+│   │       ├── __init__.py      # Package exports
+│   │       ├── base.py          # Common utilities & authentication
+│   │       ├── core.py          # Core tools (version, projects, servers)
+│   │       ├── applications.py  # Application management (18 tools)
+│   │       ├── databases.py     # Database management (7 tools)
+│   │       ├── services.py      # Service management (8 tools)
+│   │       ├── deployments.py   # Deployment monitoring (4 tools)
+│   │       ├── environments.py  # Environment variables (3 tools)
+│   │       └── registry.py      # Central tool registration
 │   └── utils/
 │       └── logger.py
 ├── typescript/               # TypeScript MCP server
@@ -161,7 +170,7 @@ Both servers are successfully deployed and operational on Coolify:
 
 ## 🛠 Available Tools
 
-### Python Server (Port 3009) - 32 Tools Total
+### Python Server (Port 3009) - 50 Tools Total
 **Math & Calculation (3 tools):**
 - `add-numbers` - Add two numbers together
 - `multiply-numbers` - Multiply two numbers together  
@@ -175,7 +184,8 @@ Both servers are successfully deployed and operational on Coolify:
 **Web Scraping (1 tool):**
 - `crawl-url` - Advanced web scraping with content filtering and extraction modes
 
-**🚀 Coolify API Management (25 tools):**
+**🚀 Coolify API Management (43 tools):**
+*Organized in modular packages for maintainability*
 *Core Operations:*
 - `coolify-get-version` - Get Coolify instance version
 - `coolify-list-projects` - List all projects
@@ -207,6 +217,25 @@ Both servers are successfully deployed and operational on Coolify:
 - `coolify-update-build-settings` - Update build configuration
 - `coolify-manage-domains` - Manage application domains
 - `coolify-update-resource-limits` - Update CPU/memory limits
+
+*Database Management:*
+- `coolify-list-databases` - List all databases
+- `coolify-get-database-info` - Get database details
+- `coolify-create-database` - Create new databases (PostgreSQL, MySQL, MongoDB, Redis, etc.)
+- `coolify-start-database` - Start database instances
+- `coolify-stop-database` - Stop database instances
+- `coolify-restart-database` - Restart databases
+- `coolify-delete-database` - Delete databases
+
+*Service Management:*
+- `coolify-list-services` - List all services
+- `coolify-get-service-info` - Get service details
+- `coolify-create-service` - Create new services
+- `coolify-start-service` - Start services
+- `coolify-stop-service` - Stop services
+- `coolify-restart-service` - Restart services
+- `coolify-delete-service` - Delete services
+- `coolify-manage-service-env` - Manage service environment variables
 
 *Bulk Operations:*
 - `coolify-bulk-restart` - Restart multiple applications
@@ -302,6 +331,31 @@ Please use the string-operations tool to convert "Hello World" to uppercase
 Please use the crawl-url tool to extract text from https://news.ycombinator.com
 Please use the scrape-dynamic-url tool to get content from https://example.com
 ```
+
+## 🏗️ Architecture - Modular Coolify Tools
+
+The Coolify integration has been refactored into a **modular package architecture** for better maintainability:
+
+### Package Structure:
+```
+coolify_tools/
+├── __init__.py          # Package exports  
+├── base.py              # Common utilities (auth, headers, base URL)
+├── core.py              # Core tools (4 tools: version, projects, servers, deployment info)
+├── applications.py      # Application management (18 tools: lifecycle, config, health)
+├── databases.py         # Database management (7 tools: CRUD operations for all DB types)
+├── services.py          # Service management (8 tools: Docker services lifecycle)
+├── deployments.py       # Deployment monitoring (4 tools: logs, metrics, watch)
+├── environments.py      # Environment variables (3 tools: set, delete, bulk update)
+└── registry.py          # Central tool registration
+```
+
+### Benefits:
+- ✅ **Maintainable** - Single responsibility per module
+- ✅ **Testable** - Isolated functionality is easier to test
+- ✅ **Collaborative** - Multiple developers can work on different modules
+- ✅ **DRY Principle** - Common patterns extracted to base.py
+- ✅ **Performance** - Faster imports and reduced memory usage
 
 ### 🚀 Coolify Integration Examples:
 
