@@ -55,8 +55,49 @@ async def list_coolify_databases() -> list[types.TextContent]:
         error_msg = handle_requests_error(e, "Unable to list databases", "coolify-list-databases")
         return [types.TextContent(type="text", text=error_msg)]
 
-async def get_coolify_database_by_uuid(database_uuid: str) -> list[types.TextContent]:
+def _validate_uuid_parameter(uuid_value: str, param_name: str, resource_type: str) -> types.TextContent | None:
+    """Validate UUID parameter and return helpful error message if invalid."""
+    if not uuid_value:
+        return types.TextContent(type="text", text=f"""❌ **Missing Required Parameter: {param_name}**
+
+🔧 **Usage:**
+```bash
+coolify-get-{resource_type}-by-uuid --{param_name} UUID_HERE
+```
+
+💡 **Examples:**
+```bash
+# Get {resource_type} details
+coolify-get-{resource_type}-by-uuid --{param_name} eoks0kg48ksg0k0scsssocok
+
+# List all {resource_type}s to find UUIDs
+coolify-list-{resource_type}s
+```
+
+🚀 **Get {resource_type.title()} UUIDs:**
+• List all: `coolify-list-{resource_type}s`
+""")
+    
+    if len(uuid_value) < 20:  # Basic UUID length check
+        return types.TextContent(type="text", text=f"""❌ **Invalid {param_name}: {uuid_value}**
+
+The {param_name} appears to be invalid. UUIDs should be long alphanumeric strings like: `eoks0kg48ksg0k0scsssocok`
+
+💡 **Get valid {resource_type} UUIDs:**
+```bash
+coolify-list-{resource_type}s
+```
+""")
+    
+    return None
+
+async def get_coolify_database_by_uuid(database_uuid: str = None) -> list[types.TextContent]:
     """Get detailed information about a specific database by UUID."""
+    
+    # Validate UUID parameter
+    if validation_error := _validate_uuid_parameter(database_uuid, "database_uuid", "database"):
+        return [validation_error]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -111,12 +152,62 @@ External URL: {external_url}
         logger.error(f"Failed to get database info for {database_uuid}: {e}")
         return [types.TextContent(type="text", text=f"❌ Failed to get database info: {str(e)}")]
 
-async def create_coolify_database(database_type: str, name: str, description: str = None, 
+async def create_coolify_database(database_type: str = None, name: str = None, description: str = None, 
                                 environment_name: str = "production", server_uuid: str = None, 
                                 project_uuid: str = None, postgres_user: str = None, 
                                 postgres_password: str = None, postgres_db: str = None,
                                 instant_deploy: bool = True) -> list[types.TextContent]:
     """Create a new database in Coolify."""
+    
+    # Usage guidance and parameter validation
+    if not database_type or not name or not server_uuid or not project_uuid:
+        missing_params = []
+        if not database_type: missing_params.append("database_type")
+        if not name: missing_params.append("name") 
+        if not server_uuid: missing_params.append("server_uuid")
+        if not project_uuid: missing_params.append("project_uuid")
+        
+        return [types.TextContent(type="text", text=f"""❌ **Missing Required Parameters: {', '.join(missing_params)}**
+
+🔧 **Usage:**
+```bash
+coolify-create-database \\
+  --database_type postgresql \\
+  --name myapp-db \\
+  --server_uuid csgkk88okkgkwg8w0g8og8c8 \\
+  --project_uuid l8cog4c48w48kckkcgos8cwg
+```
+
+📋 **Required Parameters:**
+• **database_type**: postgresql, mysql, mariadb, mongodb, redis, dragonfly, keydb, clickhouse
+• **name**: Database name (e.g., 'myapp-db', 'redis-cache')
+• **server_uuid**: Server UUID (get with `coolify-get-deployment-info`)
+• **project_uuid**: Project UUID (get with `coolify-list-projects`)
+
+🔧 **Optional Parameters:**
+• **description**: Database description
+• **environment_name**: Environment (default: production)
+• **postgres_user**: Database username (auto-generated if not provided)
+• **postgres_password**: Database password (auto-generated if not provided)
+• **postgres_db**: Database name (defaults to main database)
+
+💡 **Examples:**
+```bash
+# PostgreSQL with custom credentials
+coolify-create-database --database_type postgresql --name myapp-db --server_uuid SERVER_UUID --project_uuid PROJECT_UUID --postgres_user myuser --postgres_password mypass
+
+# Redis cache
+coolify-create-database --database_type redis --name app-cache --server_uuid SERVER_UUID --project_uuid PROJECT_UUID
+
+# MongoDB with description
+coolify-create-database --database_type mongodb --name user-data --description "User data storage" --server_uuid SERVER_UUID --project_uuid PROJECT_UUID
+```
+
+🚀 **Get Required UUIDs:**
+• Server UUID: `coolify-get-deployment-info`
+• Project UUID: `coolify-list-projects`
+""")]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -134,7 +225,23 @@ async def create_coolify_database(database_type: str, name: str, description: st
         }
         
         if database_type not in db_type_mapping:
-            return [types.TextContent(type="text", text=f"❌ Unsupported database type: {database_type}. Supported types: {', '.join(db_type_mapping.keys())}")]
+            return [types.TextContent(type="text", text=f"""❌ **Unsupported database type: {database_type}**
+
+✅ **Supported database types:**
+• postgresql - PostgreSQL database
+• mysql - MySQL database  
+• mariadb - MariaDB database
+• mongodb - MongoDB document database
+• redis - Redis key-value store
+• dragonfly - Dragonfly in-memory database
+• keydb - KeyDB (Redis alternative)
+• clickhouse - ClickHouse analytics database
+
+💡 **Example:**
+```bash
+coolify-create-database --database_type postgresql --name myapp-db --server_uuid {server_uuid or 'SERVER_UUID'} --project_uuid {project_uuid or 'PROJECT_UUID'}
+```
+""")]
         
         endpoint = db_type_mapping[database_type]
         
@@ -335,7 +442,7 @@ DATABASE_TOOLS = {
             description="Get detailed information about a specific database by UUID.",
             inputSchema={
                 "type": "object",
-                "required": ["database_uuid"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "database_uuid": {
                         "type": "string",
@@ -354,7 +461,7 @@ DATABASE_TOOLS = {
             description="Create a new database in Coolify. Supports PostgreSQL, MySQL, MariaDB, MongoDB, Redis, DragonFly, KeyDB, and Clickhouse.",
             inputSchema={
                 "type": "object",
-                "required": ["database_type", "name", "server_uuid", "project_uuid"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "database_type": {
                         "type": "string",

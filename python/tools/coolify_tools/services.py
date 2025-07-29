@@ -104,10 +104,71 @@ Server: {server_name}
         logger.error(f"Failed to get service info for {service_uuid}: {e}")
         return [types.TextContent(type="text", text=f"❌ Failed to get service info: {str(e)}")]
 
-async def create_coolify_service(name: str, type: str, project_uuid: str, server_uuid: str, 
+async def create_coolify_service(name: str = None, type: str = None, project_uuid: str = None, server_uuid: str = None, 
                                description: str = None, environment_name: str = "production", 
                                docker_compose_raw: str = None, instant_deploy: bool = True) -> list[types.TextContent]:
     """Create a new service in Coolify."""
+    
+    # Usage guidance and parameter validation
+    if not name or not type or not project_uuid or not server_uuid:
+        missing_params = []
+        if not name: missing_params.append("name")
+        if not type: missing_params.append("type")
+        if not project_uuid: missing_params.append("project_uuid")
+        if not server_uuid: missing_params.append("server_uuid")
+        
+        return [types.TextContent(type="text", text=f"""❌ **Missing Required Parameters: {', '.join(missing_params)}**
+
+🔧 **Usage:**
+```bash
+coolify-create-service \\
+  --name wordpress-site \\
+  --type wordpress \\
+  --server_uuid csgkk88okkgkwg8w0g8og8c8 \\
+  --project_uuid l8cog4c48w48kckkcgos8cwg
+```
+
+📋 **Required Parameters:**
+• **name**: Service name (e.g., 'wordpress-site', 'monitoring-stack')
+• **type**: Service type (e.g., 'wordpress', 'redis', 'nginx', 'grafana')
+• **server_uuid**: Server UUID (get with `coolify-get-deployment-info`)
+• **project_uuid**: Project UUID (get with `coolify-list-projects`)
+
+🔧 **Optional Parameters:**
+• **description**: Service description
+• **environment_name**: Environment (default: production)
+• **docker_compose_raw**: Custom Docker Compose configuration
+• **instant_deploy**: Deploy immediately (default: true)
+
+💡 **Popular Service Types:**
+• **wordpress** - WordPress CMS
+• **redis** - Redis cache
+• **nginx** - Nginx web server
+• **mysql** - MySQL database service
+• **grafana** - Grafana monitoring
+• **prometheus** - Prometheus metrics
+• **mongodb** - MongoDB service
+• **elasticsearch** - Elasticsearch search
+
+💡 **Examples:**
+```bash
+# WordPress site
+coolify-create-service --name my-blog --type wordpress --server_uuid SERVER_UUID --project_uuid PROJECT_UUID
+
+# Redis cache with description
+coolify-create-service --name app-cache --type redis --description "Application cache layer" --server_uuid SERVER_UUID --project_uuid PROJECT_UUID
+
+# Custom service with Docker Compose
+coolify-create-service --name custom-app --type custom --docker_compose_raw "version: '3.8'..." --server_uuid SERVER_UUID --project_uuid PROJECT_UUID
+```
+
+🚀 **Get Required UUIDs:**
+• Server UUID: `coolify-get-deployment-info`
+• Project UUID: `coolify-list-projects`
+
+📖 **Need More Service Types?** Coolify supports 200+ service templates. Check the Coolify UI or documentation for the complete list.
+""")]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -394,7 +455,7 @@ SERVICE_TOOLS = {
             description="Create a new service in Coolify from the 200+ available service templates.",
             inputSchema={
                 "type": "object",
-                "required": ["name", "type", "project_uuid", "server_uuid"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "name": {
                         "type": "string",
