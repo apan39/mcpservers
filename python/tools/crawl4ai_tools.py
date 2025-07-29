@@ -4,6 +4,7 @@ import mcp.types as types
 import requests
 from bs4 import BeautifulSoup
 from utils.logger import setup_logger
+from utils.error_handler import handle_requests_error, format_enhanced_error
 
 # Set up logging
 logger = setup_logger("web_tools")
@@ -153,6 +154,11 @@ async def crawl_url_with_options(
         
         logger.info(f"Scraped {url} successfully.")
         return [types.TextContent(type="text", text=text)]
+    except requests.RequestException as e:
+        logger.error(f"Failed to scrape {url}: {e}")
+        error_msg = handle_requests_error(e, f"Unable to fetch content from {url}", "crawl-url")
+        return [types.TextContent(type="text", text=error_msg)]
     except Exception as e:
         logger.error(f"Failed to scrape {url}: {e}")
-        return [types.TextContent(type="text", text=f"Error scraping {url}: {e}")]
+        error_msg = format_enhanced_error(e, f"Unexpected error while scraping {url}", "crawl-url")
+        return [types.TextContent(type="text", text=error_msg)]

@@ -4,6 +4,7 @@ import os
 import mcp.types as types
 import requests
 from utils.logger import setup_logger
+from utils.error_handler import handle_requests_error, format_enhanced_error, get_resource_not_found_message
 
 # Set up logging
 logger = setup_logger("coolify_tools")
@@ -777,9 +778,14 @@ async def get_coolify_version() -> list[types.TextContent]:
         logger.info("Successfully retrieved Coolify version")
         return [types.TextContent(type="text", text=f"Coolify Version: {result}")]
         
+    except requests.RequestException as e:
+        logger.error(f"Failed to get Coolify version: {e}")
+        error_msg = handle_requests_error(e, "Unable to connect to Coolify API", "coolify-get-version")
+        return [types.TextContent(type="text", text=error_msg)]
     except Exception as e:
         logger.error(f"Failed to get Coolify version: {e}")
-        return [types.TextContent(type="text", text=f"Error getting Coolify version: {e}")]
+        error_msg = format_enhanced_error(e, "Unexpected error while getting Coolify version", "coolify-get-version")
+        return [types.TextContent(type="text", text=error_msg)]
 
 async def list_coolify_projects() -> list[types.TextContent]:
     """List all projects in Coolify."""
@@ -807,9 +813,14 @@ async def list_coolify_projects() -> list[types.TextContent]:
             
         return [types.TextContent(type="text", text=result)]
         
+    except requests.RequestException as e:
+        logger.error(f"Failed to list Coolify projects: {e}")
+        error_msg = handle_requests_error(e, "Unable to retrieve projects from Coolify API", "coolify-list-projects")
+        return [types.TextContent(type="text", text=error_msg)]
     except Exception as e:
         logger.error(f"Failed to list Coolify projects: {e}")
-        return [types.TextContent(type="text", text=f"Error listing projects: {e}")]
+        error_msg = format_enhanced_error(e, "Unexpected error while listing projects", "coolify-list-projects")
+        return [types.TextContent(type="text", text=error_msg)]
 
 async def list_coolify_servers() -> list[types.TextContent]:
     """List all servers in Coolify."""
@@ -1127,12 +1138,22 @@ Dockerfile Location: {dockerfile_location}
         return [types.TextContent(type="text", text=result)]
         
     except requests.exceptions.HTTPError as e:
-        error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
-        logger.error(f"Failed to get application info for {app_uuid}: {error_msg}")
-        return [types.TextContent(type="text", text=f"Failed to get application info: {error_msg}")]
+        if e.response.status_code == 404:
+            logger.error(f"Application {app_uuid} not found")
+            error_msg = get_resource_not_found_message("application", app_uuid, "coolify-get-application-info")
+            return [types.TextContent(type="text", text=error_msg)]
+        else:
+            logger.error(f"Failed to get application info for {app_uuid}: {e}")
+            error_msg = handle_requests_error(e, f"Unable to retrieve application {app_uuid}", "coolify-get-application-info")
+            return [types.TextContent(type="text", text=error_msg)]
+    except requests.RequestException as e:
+        logger.error(f"Failed to get application info for {app_uuid}: {e}")
+        error_msg = handle_requests_error(e, f"Connection error while retrieving application {app_uuid}", "coolify-get-application-info")
+        return [types.TextContent(type="text", text=error_msg)]
     except Exception as e:
         logger.error(f"Failed to get application info for {app_uuid}: {e}")
-        return [types.TextContent(type="text", text=f"Error getting application info: {e}")]
+        error_msg = format_enhanced_error(e, f"Unexpected error while getting application info for {app_uuid}", "coolify-get-application-info")
+        return [types.TextContent(type="text", text=error_msg)]
 
 async def restart_application(app_uuid: str) -> list[types.TextContent]:
     """Restart an application in Coolify."""
