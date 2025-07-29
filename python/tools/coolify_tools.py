@@ -62,7 +62,7 @@ def register_coolify_tools(tool_registry):
                         "description": "Optional UUID of the project to filter applications"
                     }
                 },
-                "additionalProperties": false
+                "additionalProperties": False
             }
         ),
         "handler": list_coolify_applications
@@ -428,11 +428,14 @@ async def list_coolify_servers() -> list[types.TextContent]:
         logger.error(f"Failed to list Coolify servers: {e}")
         return [types.TextContent(type="text", text=f"Error listing servers: {e}")]
 
-async def list_coolify_applications(project_uuid: str = None) -> list[types.TextContent]:
+async def list_coolify_applications(**kwargs) -> list[types.TextContent]:
     """List all applications or filter by project UUID."""
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
+        
+        # Extract project_uuid from kwargs
+        project_uuid = kwargs.get('project_uuid', None)
         
         # Treat empty string as None
         if project_uuid == "":
@@ -448,14 +451,23 @@ async def list_coolify_applications(project_uuid: str = None) -> list[types.Text
         if isinstance(applications, list):
             # Filter by project if project_uuid is provided
             if project_uuid:
-                filtered_apps = []
-                for app in applications:
-                    # Check if app belongs to the specified project
-                    app_env_id = app.get('environment_id')
-                    if app_env_id:
-                        # Try to match by environment or project - this may need adjustment based on Coolify structure
-                        filtered_apps.append(app)
-                applications = filtered_apps
+                # Get project details to find environment IDs
+                try:
+                    project_response = requests.get(f"{base_url}/projects/{project_uuid}", headers=headers, timeout=30)
+                    if project_response.status_code == 200:
+                        project_data = project_response.json()
+                        environment_ids = [env.get('id') for env in project_data.get('environments', [])]
+                        
+                        filtered_apps = []
+                        for app in applications:
+                            app_env_id = app.get('environment_id')
+                            if app_env_id in environment_ids:
+                                filtered_apps.append(app)
+                        applications = filtered_apps
+                    else:
+                        logger.warning(f"Could not fetch project {project_uuid} for filtering")
+                except Exception as filter_error:
+                    logger.error(f"Error filtering by project {project_uuid}: {filter_error}")
             
             app_info = []
             for app in applications:
