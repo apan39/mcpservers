@@ -128,10 +128,10 @@ async def list_coolify_applications(**kwargs) -> list[types.TextContent]:
 
 
 async def create_github_application(
-    project_uuid: str,
-    server_uuid: str,
-    git_repository: str,
-    name: str,
+    project_uuid: str = None,
+    server_uuid: str = None,
+    git_repository: str = None,
+    name: str = None,
     git_branch: str = "main",
     build_pack: str = "nixpacks",
     domains: str = None,
@@ -146,6 +146,67 @@ async def create_github_application(
     **kwargs
 ) -> list[types.TextContent]:
     """Create a new application from a GitHub repository."""
+    
+    # Usage guidance and parameter validation
+    if not project_uuid or not server_uuid or not git_repository or not name:
+        missing_params = []
+        if not project_uuid: missing_params.append("project_uuid")
+        if not server_uuid: missing_params.append("server_uuid")
+        if not git_repository: missing_params.append("git_repository")
+        if not name: missing_params.append("name")
+        
+        return [types.TextContent(type="text", text=f"""❌ **Missing Required Parameters: {', '.join(missing_params)}**
+
+🔧 **Usage:**
+```bash
+coolify-create-github-app \\
+  --project_uuid l8cog4c48w48kckkcgos8cwg \\
+  --server_uuid csgkk88okkgkwg8w0g8og8c8 \\
+  --git_repository https://github.com/username/repo \\
+  --name my-app
+```
+
+📋 **Required Parameters:**
+• **project_uuid**: Project UUID (get with `coolify-list-projects`)
+• **server_uuid**: Server UUID (get with `coolify-get-deployment-info`)
+• **git_repository**: GitHub repository URL (e.g., https://github.com/user/repo)
+• **name**: Application name (e.g., 'my-app', 'frontend')
+
+🔧 **Optional Parameters:**
+• **git_branch**: Git branch to deploy (default: main)
+• **build_pack**: Build method - nixpacks, dockerfile, static (default: nixpacks)
+• **environment_name**: Environment (default: production)
+• **instant_deploy**: Deploy immediately after creation (default: true)
+• **domains**: Custom domains (comma-separated)
+• **base_directory**: Source code subdirectory
+• **publish_directory**: Output directory for static builds
+• **install_command**: Custom install command
+• **build_command**: Custom build command  
+• **start_command**: Custom start command
+• **ports_exposes**: Port to expose (e.g., '3000')
+
+💡 **Examples:**
+```bash
+# Simple Node.js app
+coolify-create-github-app --project_uuid PROJECT_UUID --server_uuid SERVER_UUID --git_repository https://github.com/user/my-app --name my-app
+
+# Static site with custom build
+coolify-create-github-app --project_uuid PROJECT_UUID --server_uuid SERVER_UUID --git_repository https://github.com/user/docs --name docs-site --build_pack static --publish_directory dist
+
+# Docker app with custom domain
+coolify-create-github-app --project_uuid PROJECT_UUID --server_uuid SERVER_UUID --git_repository https://github.com/user/api --name api --build_pack dockerfile --domains api.example.com --ports_exposes 8080
+```
+
+🚀 **Get Required UUIDs:**
+• Server UUID: `coolify-get-deployment-info`
+• Project UUID: `coolify-list-projects`
+
+💡 **Build Pack Options:**
+• **nixpacks**: Auto-detect and build (recommended)
+• **dockerfile**: Use Dockerfile in repository
+• **static**: Static files (HTML, CSS, JS)
+""")]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -212,8 +273,53 @@ The application will be deployed automatically if instant_deploy is enabled."""
         return [types.TextContent(type="text", text=f"Error creating application: {e}")]
 
 
-async def get_application_info(app_uuid: str) -> list[types.TextContent]:
+async def get_application_info(app_uuid: str = None) -> list[types.TextContent]:
     """Get detailed application information and status by application UUID."""
+    
+    # Usage guidance and parameter validation
+    if not app_uuid:
+        return [types.TextContent(type="text", text="""❌ **Missing Required Parameter: app_uuid**
+
+🔧 **Usage:**
+```bash
+coolify-get-application-info --app_uuid APPLICATION_UUID_HERE
+```
+
+📋 **Required Parameters:**
+• **app_uuid**: Application UUID (long alphanumeric string)
+
+💡 **Examples:**
+```bash
+# Get application details
+coolify-get-application-info --app_uuid zs8sk0cgs4s8gsgwswsg88ko
+
+# Check application status and configuration
+coolify-get-application-info --app_uuid r4kss4gcs4oosg0o444s4c4s
+```
+
+🚀 **Get Application UUIDs:**
+• List all applications: `coolify-list-applications`
+• Filter by project: `coolify-list-applications --project_uuid PROJECT_UUID`
+
+💡 **What you'll get:**
+• Application name, status, and health
+• Repository and branch information  
+• Build configuration and commands
+• Environment variables (masked)
+• Deployment settings
+""")]
+    
+    if len(app_uuid) < 20:  # Basic UUID length check
+        return [types.TextContent(type="text", text=f"""❌ **Invalid app_uuid: {app_uuid}**
+
+The app_uuid appears to be invalid. Application UUIDs should be long alphanumeric strings like: `zs8sk0cgs4s8gsgwswsg88ko`
+
+💡 **Get valid application UUIDs:**
+```bash
+coolify-list-applications
+```
+""")]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -291,8 +397,56 @@ Dockerfile Location: {dockerfile_location}
 
 
 # Application Lifecycle Management
-async def restart_application(app_uuid: str) -> list[types.TextContent]:
+async def restart_application(app_uuid: str = None) -> list[types.TextContent]:
     """Restart an application in Coolify."""
+    
+    # Usage guidance and parameter validation
+    if not app_uuid:
+        return [types.TextContent(type="text", text="""❌ **Missing Required Parameter: app_uuid**
+
+🔧 **Usage:**
+```bash
+coolify-restart-application --app_uuid APPLICATION_UUID_HERE
+```
+
+📋 **Required Parameters:**
+• **app_uuid**: Application UUID to restart
+
+💡 **Examples:**
+```bash
+# Restart application
+coolify-restart-application --app_uuid zs8sk0cgs4s8gsgwswsg88ko
+
+# Restart after configuration changes
+coolify-restart-application --app_uuid r4kss4gcs4oosg0o444s4c4s
+```
+
+🚀 **Get Application UUIDs:**
+• List all applications: `coolify-list-applications`
+
+💡 **What happens:**
+• Stops the application containers
+• Starts them again with current configuration
+• Maintains the same deployment/version
+• Does NOT rebuild from source (use deploy for that)
+
+⚠️ **Note:** This restarts the current deployment. To deploy new code changes, use `coolify-deploy-application` instead.
+
+🔍 **Check Status After Restart:**
+• Get application info: `coolify-get-application-info --app_uuid APP_UUID`
+""")]
+    
+    if len(app_uuid) < 20:  # Basic UUID length check
+        return [types.TextContent(type="text", text=f"""❌ **Invalid app_uuid: {app_uuid}**
+
+The app_uuid appears to be invalid. Application UUIDs should be long alphanumeric strings like: `zs8sk0cgs4s8gsgwswsg88ko`
+
+💡 **Get valid application UUIDs:**
+```bash
+coolify-list-applications
+```
+""")]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -429,8 +583,57 @@ async def get_application_logs(app_uuid: str, lines: int = 100) -> list[types.Te
 
 
 # Deployment Management
-async def deploy_application(app_uuid: str, force: bool = False) -> list[types.TextContent]:
+async def deploy_application(app_uuid: str = None, force: bool = False) -> list[types.TextContent]:
     """Trigger a deployment for an existing application."""
+    
+    # Usage guidance and parameter validation
+    if not app_uuid:
+        return [types.TextContent(type="text", text="""❌ **Missing Required Parameter: app_uuid**
+
+🔧 **Usage:**
+```bash
+coolify-deploy-application --app_uuid APPLICATION_UUID_HERE
+```
+
+📋 **Required Parameters:**
+• **app_uuid**: Application UUID to deploy
+
+🔧 **Optional Parameters:**
+• **force**: Force deployment even if no changes detected (default: false)
+
+💡 **Examples:**
+```bash
+# Normal deployment
+coolify-deploy-application --app_uuid zs8sk0cgs4s8gsgwswsg88ko
+
+# Force deployment (rebuild even without changes) 
+coolify-deploy-application --app_uuid zs8sk0cgs4s8gsgwswsg88ko --force true
+```
+
+🚀 **Get Application UUIDs:**
+• List all applications: `coolify-list-applications`
+
+💡 **What happens:**
+• Triggers a new deployment from the latest Git commit
+• Creates a deployment UUID for monitoring progress
+• Returns deployment status and monitoring instructions
+
+🔍 **Monitor Deployment:**
+• Check deployment logs: `coolify-get-deployment-logs --deployment_uuid DEPLOYMENT_UUID`
+• Watch progress: `coolify-watch-deployment --deployment_uuid DEPLOYMENT_UUID`
+""")]
+    
+    if len(app_uuid) < 20:  # Basic UUID length check
+        return [types.TextContent(type="text", text=f"""❌ **Invalid app_uuid: {app_uuid}**
+
+The app_uuid appears to be invalid. Application UUIDs should be long alphanumeric strings like: `zs8sk0cgs4s8gsgwswsg88ko`
+
+💡 **Get valid application UUIDs:**
+```bash
+coolify-list-applications
+```
+""")]
+    
     try:
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
@@ -1170,7 +1373,7 @@ APPLICATION_TOOLS = {
             description="Create a new application from a GitHub repository in Coolify.",
             inputSchema={
                 "type": "object",
-                "required": ["project_uuid", "server_uuid", "git_repository", "name"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "project_uuid": {
                         "type": "string",
@@ -1249,7 +1452,7 @@ APPLICATION_TOOLS = {
             description="Get detailed application information and status by application UUID.",
             inputSchema={
                 "type": "object",
-                "required": ["app_uuid"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "app_uuid": {
                         "type": "string",
@@ -1268,7 +1471,7 @@ APPLICATION_TOOLS = {
             description="Restart an application in Coolify.",
             inputSchema={
                 "type": "object",
-                "required": ["app_uuid"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "app_uuid": {
                         "type": "string",
@@ -1373,7 +1576,7 @@ APPLICATION_TOOLS = {
             description="Trigger a deployment for an existing application.",
             inputSchema={
                 "type": "object",
-                "required": ["app_uuid"],
+                "required": [],  # Made optional so we can provide helpful guidance
                 "properties": {
                     "app_uuid": {
                         "type": "string",
