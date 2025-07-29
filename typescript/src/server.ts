@@ -13,6 +13,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { registerPlaywrightTools } from "./playwrightTools.js";
+import { registerFlowiseTools } from "./flowiseTools.js";
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -246,6 +247,9 @@ function createMCPServer(): McpServer {
   // Register Playwright tools
   registerPlaywrightTools(server);
   
+  // Register Flowise tools
+  registerFlowiseTools(server);
+  
   return server;
 }
 
@@ -396,6 +400,70 @@ app.post("/mcp", async (req: Request, res: Response) => {
                   }
                 }
               }
+            },
+            {
+              name: "flowise-list-chatflows",
+              description: "List all available Flowise chatflows",
+              inputSchema: {
+                type: "object",
+                properties: {}
+              }
+            },
+            {
+              name: "flowise-get-chatflow",
+              description: "Get details of a specific Flowise chatflow",
+              inputSchema: {
+                type: "object",
+                required: ["chatflowId"],
+                properties: {
+                  chatflowId: {
+                    type: "string",
+                    description: "The ID of the chatflow to retrieve"
+                  }
+                }
+              }
+            },
+            {
+              name: "flowise-predict",
+              description: "Send a message to a Flowise chatflow and get a response",
+              inputSchema: {
+                type: "object",
+                required: ["chatflowId", "question"],
+                properties: {
+                  chatflowId: {
+                    type: "string",
+                    description: "The ID of the chatflow to use"
+                  },
+                  question: {
+                    type: "string",
+                    description: "The message/question to send"
+                  },
+                  streaming: {
+                    type: "boolean",
+                    description: "Enable streaming response (default: false)"
+                  },
+                  sessionId: {
+                    type: "string",
+                    description: "Session ID for conversation continuity"
+                  },
+                  overrideConfig: {
+                    type: "object",
+                    description: "Override chatflow configuration"
+                  },
+                  history: {
+                    type: "array",
+                    description: "Previous conversation history"
+                  }
+                }
+              }
+            },
+            {
+              name: "flowise-test-connection",
+              description: "Test connection to Flowise instance",
+              inputSchema: {
+                type: "object",
+                properties: {}
+              }
             }
           ]
         }
@@ -448,6 +516,24 @@ app.post("/mcp", async (req: Request, res: Response) => {
               {
                 type: "text",
                 text: `Would scrape URL: ${args.url} (Playwright tool not implemented in simplified mode)`
+              }
+            ]
+          }
+        });
+        return;
+      }
+
+      // Handle Flowise tools
+      if (name.startsWith("flowise-")) {
+        // For the simple endpoint, just pass through to advanced endpoint
+        res.json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Flowise tool "${name}" requires the advanced MCP endpoint. Use /mcp-advanced instead.`
               }
             ]
           }

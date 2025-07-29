@@ -214,10 +214,20 @@ Both servers are successfully deployed and operational on Coolify:
 - `coolify-project-status` - Get comprehensive project status
 - `coolify-get-application-logs` - Get application runtime logs
 
-### TypeScript Server (Port 3010) - 3 Tools Total
+### TypeScript Server (Port 3010) - 10 Tools Total
+**Basic Tools (3 tools):**
 - `greet` - Simple greeting tool
 - `multi-greet` - Friendly greeting with delays
 - `scrape-dynamic-url` - Playwright-powered dynamic web scraping
+
+**🤖 Flowise AI Integration (7 tools):**
+- `flowise-test-connection` - Test connectivity to Flowise instance
+- `flowise-predict` - Send messages to AI chatflows and get responses
+- `flowise-list-chatflows` - List all available AI workflows
+- `flowise-get-chatflow` - Get detailed chatflow information
+- `flowise-create-chatflow` - Create new AI agent workflows
+- `flowise-update-chatflow` - Update existing chatflows
+- `flowise-delete-chatflow` - Delete chatflows
 
 ### Browser-Use MCP Server - 30 Tools Total
 **Session Management (4 tools):**
@@ -272,7 +282,7 @@ Both servers are successfully deployed and operational on Coolify:
 - `get-tool-info` - Get detailed information about a specific tool with examples
 - `get-learning-path` - Get recommended learning paths (beginner, deployment, monitoring, etc.)
 
-**Total Available Tools: 70 tools across all servers**
+**Total Available Tools: 77 tools across all servers**
 
 ## 🤖 AI Assistant Commands
 
@@ -340,6 +350,36 @@ Please update the health check for app abc-123 to use path /api/health with 30 s
 Please restart these applications: abc-123, def-456, ghi-789
 Please deploy multiple applications: abc-123, def-456
 Please show the complete status for project abc-123
+```
+
+### 🤖 Flowise AI Integration Examples:
+
+**Connection & Discovery:**
+```
+Please test the connection to the Flowise instance using flowise-test-connection
+Please list all available chatflows using flowise-list-chatflows
+Please get detailed information about chatflow "abc-123" using flowise-get-chatflow
+```
+
+**AI Conversations:**
+```
+Please use flowise-predict to send "What is artificial intelligence?" to chatflow "abc-123"
+Please chat with chatflow "def-456" and ask "Help me write a Python function"
+Please continue our conversation with chatflow "abc-123" using session ID "sess-789"
+```
+
+**Workflow Management:**
+```
+Please create a new chatflow called "Customer Support Bot" using flowise-create-chatflow
+Please update chatflow "abc-123" to be deployed using flowise-update-chatflow
+Please delete the test chatflow "test-456" using flowise-delete-chatflow with confirmation
+```
+
+**Advanced Features:**
+```
+Please chat with chatflow "abc-123" and override the temperature to 0.7 for more creative responses
+Please send a message to chatflow "def-456" with conversation history from our previous chat
+Please create a chatflow for document analysis and then test it with a sample question
 ```
 
 ### 🌐 Advanced Web Scraping Examples:
@@ -503,6 +543,37 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
        "id": 1
      }' \
      http://localhost:3009/mcp
+
+# Flowise AI integration (TypeScript server)
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "jsonrpc": "2.0",
+       "method": "tools/call",
+       "params": {
+         "name": "flowise-test-connection",
+         "arguments": {}
+       },
+       "id": 1
+     }' \
+     http://localhost:3010/mcp
+
+# Chat with AI chatflow
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "jsonrpc": "2.0",
+       "method": "tools/call",
+       "params": {
+         "name": "flowise-predict",
+         "arguments": {
+           "chatflowId": "your-chatflow-id",
+           "question": "What is artificial intelligence?"
+         }
+       },
+       "id": 1
+     }' \
+     http://localhost:3010/mcp
 ```
 
 ## Testing Tools
