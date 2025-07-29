@@ -161,22 +161,129 @@ Both servers are successfully deployed and operational on Coolify:
 
 ## 🛠 Available Tools
 
-### Python Server (Port 3009)
-- **Math**: `add-numbers`, `multiply-numbers`, `calculate-percentage`
-- **Text**: `string-operations`, `word-count`, `format-text`
-- **Web**: `crawl-url` (BeautifulSoup-powered web scraping)
-- **🚀 Coolify API**: 
-  - `coolify-get-version` - Get Coolify version
-  - `coolify-list-projects` - List all projects
-  - `coolify-list-servers` - List all servers
-  - `coolify-list-applications` - List apps in a project
-  - `coolify-create-github-app` - **Deploy GitHub repos to Coolify**
+### Python Server (Port 3009) - 32 Tools Total
+**Math & Calculation (3 tools):**
+- `add-numbers` - Add two numbers together
+- `multiply-numbers` - Multiply two numbers together  
+- `calculate-percentage` - Calculate percentage of a value
 
-### TypeScript Server (Port 3010)
-- **Basic**: `greet`, `multi-greet`
-- **Web**: `scrape-dynamic-url` (Playwright-powered dynamic scraping)
+**Text Processing (3 tools):**
+- `string-operations` - Perform string operations (uppercase, lowercase, reverse)
+- `word-count` - Count words in text
+- `format-text` - Format text (title_case, sentence_case, camel_case)
+
+**Web Scraping (1 tool):**
+- `crawl-url` - Advanced web scraping with content filtering and extraction modes
+
+**🚀 Coolify API Management (25 tools):**
+*Core Operations:*
+- `coolify-get-version` - Get Coolify instance version
+- `coolify-list-projects` - List all projects
+- `coolify-list-servers` - List all servers  
+- `coolify-list-applications` - List applications (filterable by project)
+- `coolify-create-github-app` - **Deploy GitHub repositories**
+
+*Application Management:*
+- `coolify-get-application-info` - Get detailed application information
+- `coolify-restart-application` - Restart an application
+- `coolify-stop-application` - Stop an application
+- `coolify-start-application` - Start an application
+- `coolify-delete-application` - Delete an application
+
+*Deployment Operations:*
+- `coolify-deploy-application` - Deploy an application
+- `coolify-get-deployment-logs` - Get deployment logs
+- `coolify-get-deployment-info` - Get deployment information
+- `coolify-watch-deployment` - Watch deployment progress in real-time
+- `coolify-get-recent-deployments` - Get recent deployment history
+- `coolify-deployment-metrics` - Get deployment metrics and statistics
+
+*Configuration Management:*
+- `coolify-update-health-check` - Update health check settings
+- `coolify-test-health-endpoint` - Test application health endpoints
+- `coolify-set-env-variable` - Set environment variables
+- `coolify-delete-env-variable` - Delete environment variables
+- `coolify-bulk-update-env` - Bulk update multiple environment variables
+- `coolify-update-build-settings` - Update build configuration
+- `coolify-manage-domains` - Manage application domains
+- `coolify-update-resource-limits` - Update CPU/memory limits
+
+*Bulk Operations:*
+- `coolify-bulk-restart` - Restart multiple applications
+- `coolify-bulk-deploy` - Deploy multiple applications
+- `coolify-project-status` - Get comprehensive project status
+- `coolify-get-application-logs` - Get application runtime logs
+
+### TypeScript Server (Port 3010) - 3 Tools Total
+- `greet` - Simple greeting tool
+- `multi-greet` - Friendly greeting with delays
+- `scrape-dynamic-url` - Playwright-powered dynamic web scraping
+
+### Browser-Use MCP Server - 30 Tools Total
+**Session Management (4 tools):**
+- `create_browser_session` - Create new browser session
+- `close_browser_session` - Close browser session
+- `list_browser_sessions` - List all active sessions
+- `get_session_info` - Get detailed session information
+
+**Navigation & Page Control (4 tools):**
+- `navigate_to_url` - Navigate to specific URL
+- `go_back` - Navigate back in browser history
+- `go_forward` - Navigate forward in browser history
+- `refresh_page` - Refresh current page
+
+**Content Extraction (3 tools):**
+- `get_page_content` - Extract page content (text/HTML)
+- `extract_content` - Extract specific content using selectors
+- `get_page_html` - Get raw HTML content
+
+**User Interactions (4 tools):**
+- `click_element` - Click elements using CSS selectors
+- `input_text` - Type text into input fields
+- `scroll` - Scroll page in specified direction
+- `send_keys` - Send keyboard keys (Tab, Enter, Escape, etc.)
+
+**Tab Management (4 tools):**
+- `create_tab` - Create new browser tab
+- `list_tabs` - List all open tabs
+- `switch_tab` - Switch to specific tab
+- `close_tab` - Close current or specific tab
+
+**File Operations (2 tools):**
+- `upload_file` - Upload files using file input elements
+- `download_file` - Download files by clicking download links
+
+**Advanced Features (9 tools):**
+- `execute_javascript` - Execute custom JavaScript code
+- `wait_for_element` - Wait for elements to appear
+- `wait_for_load` - Wait for page loading completion
+- `take_screenshot` - Capture page or element screenshots
+- `get_browser_state` - Get comprehensive browser state
+- `get_dom_elements` - Get clickable/interactive DOM elements
+- `create_agent` - Create AI agent for browser automation
+- `execute_agent_task` - Execute tasks using AI agents
+- `get_agent_history` - Get AI agent action history
+
+### Help & Discovery Tools - 5 Tools Total
+**Tool Categorization & Help System:**
+- `list-tool-categories` - Show all available tool categories with descriptions
+- `get-tools-by-category` - List tools in a specific category (math, text, web, coolify, etc.)
+- `search-tools` - Search for tools by name, description, or tags
+- `get-tool-info` - Get detailed information about a specific tool with examples
+- `get-learning-path` - Get recommended learning paths (beginner, deployment, monitoring, etc.)
+
+**Total Available Tools: 70 tools across all servers**
 
 ## 🤖 AI Assistant Commands
+
+### Tool Discovery & Help:
+```
+Please list all available tool categories
+Please show me all deployment tools
+Please search for tools related to "health"
+Please get detailed information about the coolify-deploy-application tool
+Please get a beginner learning path for using these tools
+```
 
 ### Basic Tools:
 ```
@@ -187,10 +294,119 @@ Please use the scrape-dynamic-url tool to get content from https://example.com
 ```
 
 ### 🚀 Coolify Integration Examples:
+
+**Basic Operations:**
 ```
 Please use the coolify-list-projects tool
-Please use the coolify-list-servers tool
+Please use the coolify-list-servers tool  
+Please use the coolify-list-applications tool to show all apps in project abc-123
+```
+
+**GitHub Deployment:**
+```
 Please use the coolify-create-github-app tool to deploy https://github.com/user/repo to project UUID abc123 and server UUID xyz789 with name "my-new-app"
+```
+
+**Application Management:**
+```
+Please check the status of application abc-123 using coolify-get-application-info
+Please restart application abc-123 using coolify-restart-application
+Please deploy application abc-123 using coolify-deploy-application
+```
+
+**Environment Configuration:**
+```
+Please set environment variable PORT=3000 for application abc-123
+Please bulk update these environment variables for app abc-123: PORT=3000, NODE_ENV=production, API_URL=https://api.example.com
+Please delete the OLD_API_KEY environment variable from application abc-123
+```
+
+**Deployment Monitoring:**
+```
+Please watch the deployment progress for deployment xyz-789
+Please get the deployment logs for deployment xyz-789
+Please show recent deployments for application abc-123
+Please get deployment metrics for application abc-123
+```
+
+**Health Check Management:**
+```
+Please test the health endpoint for application abc-123
+Please update the health check for app abc-123 to use path /api/health with 30 second interval
+```
+
+**Bulk Operations:**
+```
+Please restart these applications: abc-123, def-456, ghi-789
+Please deploy multiple applications: abc-123, def-456
+Please show the complete status for project abc-123
+```
+
+### 🌐 Advanced Web Scraping Examples:
+
+**Smart Content Extraction:**
+```
+Please crawl this article but only get the main content: https://longblog.com/post
+Please get just the headings from this documentation page: https://docs.example.com
+Please get a summary of this news article: https://news.com/long-article
+Please crawl this page but exclude ads and navigation: https://cluttered-site.com
+Please extract only the product description from this e-commerce page
+```
+
+**Dynamic Content Scraping:**
+```
+Please use the scrape-dynamic-url tool to get content from this SPA: https://spa-app.com
+Please scrape this JavaScript-heavy page with 15 second timeout: https://dynamic-content.com
+```
+
+### 🤖 Browser Automation Examples:
+
+**Session Management:**
+```
+Please create a browser session called "shopping" in headless mode
+Please create a browser session called "testing" with visible browser window
+Please list all active browser sessions
+Please get detailed info about session "shopping"
+```
+
+**Navigation & Interaction:**
+```
+Please navigate to google.com in session "search"
+Please click the search button with class "search-btn" in session "search"
+Please type "MCP servers" into the search input in session "search"
+Please scroll down 500 pixels in session "search"
+Please go back to the previous page in session "search"
+```
+
+**Advanced Interactions:**
+```
+Please take a screenshot of the current page in session "search"
+Please execute JavaScript to get the page title in session "search"
+Please wait for element with class "results" to appear in session "search"
+Please upload file "/path/to/document.pdf" to the file input in session "search"
+```
+
+**Tab Management:**
+```
+Please create a new tab and navigate to example.com in session "multi"
+Please list all open tabs in session "multi"
+Please switch to tab 2 in session "multi"
+Please close the current tab in session "multi"
+```
+
+**AI Agent Automation:**
+```
+Please create an AI agent called "form-filler" in session "automation"
+Please use agent "form-filler" to fill out the contact form on this page
+Please use agent "navigator" to find and click the login button
+Please get the action history for agent "form-filler"
+```
+
+**Complex Workflows:**
+```
+Please create a browser session, navigate to a shopping site, search for "laptops", take a screenshot of the results, and then close the session
+Please automate logging into a website and then navigate to the dashboard
+Please create an agent to automatically fill out a multi-step form
 ```
 
 ### For Direct API Testing:
