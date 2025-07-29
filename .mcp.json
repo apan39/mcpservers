@@ -2,18 +2,26 @@
   "mcpServers": {
     "python-tools": {
       "type": "stdio",
-      "command": "/home/johan/Documents/development/mcpservers/python/venv/bin/python",
+      "command": "/Users/imac_2/utveckling/mcpservers/python/venv/bin/python",
       "args": [
-        "/home/johan/Documents/development/mcpservers/python/simple_stdio_server.py"
+        "/Users/imac_2/utveckling/mcpservers/python/simple_stdio_server.py"
+      ],
+      "env": {}
+    },
+    "python-stdio": {
+      "type": "stdio",
+      "command": "/Users/imac_2/utveckling/mcpservers/python/venv/bin/python",
+      "args": [
+        "/Users/imac_2/utveckling/mcpservers/python/simple_stdio_server.py"
       ],
       "env": {}
     },
     "remote-python-tools": {
-      "type": "http",
+      "type": "http", 
       "url": "http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp",
       "headers": {
         "Authorization": "Bearer ${MCP_API_KEY}",
-        "Accept": "application/json"
+        "Content-Type": "application/json"
       }
     },
     "remote-typescript-tools": {
@@ -21,14 +29,14 @@
       "url": "http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp",
       "headers": {
         "Authorization": "Bearer ${MCP_API_KEY}",
-        "Accept": "application/json"
+        "Content-Type": "application/json"
       }
     },
     "browser-use-mcp": {
       "type": "stdio",
-      "command": "/home/johan/Documents/development/mcpservers/browser-use-mcp/venv/bin/python3",
+      "command": "python3",
       "args": [
-        "/home/johan/Documents/development/mcpservers/browser-use-mcp/server_stdio.py"
+        "/Users/imac_2/utveckling/mcpservers/browser-use-mcp/server_stdio.py"
       ],
       "env": {}
     },
@@ -37,7 +45,7 @@
       "url": "http://w8wcwg48ok4go8g8swgwkgk8.135.181.149.150.sslip.io/mcp",
       "headers": {
         "Authorization": "Bearer ${MCP_API_KEY}",
-        "Accept": "application/json"
+        "Content-Type": "application/json"
       }
     }
   }
