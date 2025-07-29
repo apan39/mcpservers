@@ -1485,9 +1485,14 @@ async def test_health_endpoint(app_uuid: str) -> list[types.TextContent]:
         health_check_enabled = app_data.get('health_check_enabled', False)
         health_check_path = app_data.get('health_check_path', '/health')
         
-        # Try to determine the application URL
+        # Try to determine the application URL - check multiple fields
         fqdn = app_data.get('fqdn', '')
+        custom_domain = app_data.get('custom_domain', '')
+        domains = app_data.get('domains', '')
         ports_mappings = app_data.get('ports_mappings', '')
+        
+        # Use the best available domain information
+        best_domain = fqdn or custom_domain or domains
         
         result = f"🏥 Health Check Test for **{app_name}**\n\n"
         result += f"**Application Configuration:**\n"
@@ -1495,6 +1500,10 @@ async def test_health_endpoint(app_uuid: str) -> list[types.TextContent]:
         result += f"• Health Checks: {'✅ Enabled' if health_check_enabled else '❌ Disabled'}\n"
         result += f"• Health Path: {health_check_path}\n"
         result += f"• FQDN: {fqdn or 'Not configured'}\n"
+        if custom_domain:
+            result += f"• Custom Domain: {custom_domain}\n"
+        if domains and domains != fqdn:
+            result += f"• Additional Domains: {domains}\n"
         result += f"• Port Mappings: {ports_mappings or 'Not configured'}\n\n"
         
         if not health_check_enabled:
@@ -1502,26 +1511,59 @@ async def test_health_endpoint(app_uuid: str) -> list[types.TextContent]:
             result += "Use `coolify-update-health-check` to enable them.\n\n"
         
         # Try to test the health endpoint if we have enough info
-        if fqdn and health_check_path:
+        if best_domain and health_check_path:
             try:
-                health_url = f"http://{fqdn}{health_check_path}"
+                # Smart URL construction - handle different FQDN formats
+                if best_domain.startswith('http://') or best_domain.startswith('https://'):
+                    # Domain already includes protocol
+                    health_url = f"{best_domain}{health_check_path}"
+                elif '.' in best_domain and not best_domain.startswith('localhost'):
+                    # Looks like a proper domain, try HTTPS first for security
+                    health_url = f"https://{best_domain}{health_check_path}"
+                else:
+                    # Local or development URL, use HTTP
+                    health_url = f"http://{best_domain}{health_check_path}"
+                
                 result += f"**Testing Health Endpoint:** `{health_url}`\n"
                 
                 # Test without auth first
-                test_response = requests.get(health_url, timeout=10)
-                result += f"• Status Code: {test_response.status_code}\n"
-                result += f"• Response Time: {test_response.elapsed.total_seconds():.2f}s\n"
+                test_response = None
+                try:
+                    test_response = requests.get(health_url, timeout=10)
+                except requests.exceptions.SSLError as ssl_error:
+                    # If HTTPS fails due to SSL issues, try HTTP as fallback
+                    if health_url.startswith('https://'):
+                        http_url = health_url.replace('https://', 'http://')
+                        result += f"• ⚠️ HTTPS failed (SSL issue), trying HTTP: `{http_url}`\n"
+                        try:
+                            test_response = requests.get(http_url, timeout=10)
+                            health_url = http_url  # Update for reporting
+                        except Exception as http_error:
+                            result += f"• Result: ❌ **Both HTTPS and HTTP failed**\n"
+                            result += f"• HTTPS Error: {str(ssl_error)[:100]}...\n"
+                            result += f"• HTTP Error: {str(http_error)[:100]}...\n"
+                            test_response = None
+                    else:
+                        result += f"• Result: ❌ **SSL Error**: {str(ssl_error)[:100]}...\n"
+                        test_response = None
+                except Exception as e:
+                    result += f"• Result: ❌ **Connection Error**: {str(e)[:100]}...\n"
+                    test_response = None
                 
-                if test_response.status_code == 200:
-                    result += f"• Result: ✅ **Healthy**\n"
-                    try:
-                        health_data = test_response.json()
-                        result += f"• Response: {health_data}\n"
-                    except:
+                if test_response:
+                    result += f"• Status Code: {test_response.status_code}\n"
+                    result += f"• Response Time: {test_response.elapsed.total_seconds():.2f}s\n"
+                    
+                    if test_response.status_code == 200:
+                        result += f"• Result: ✅ **Healthy**\n"
+                        try:
+                            health_data = test_response.json()
+                            result += f"• Response: {health_data}\n"
+                        except:
+                            result += f"• Response: {test_response.text[:200]}...\n"
+                    else:
+                        result += f"• Result: ❌ **Unhealthy** (Status: {test_response.status_code})\n"
                         result += f"• Response: {test_response.text[:200]}...\n"
-                else:
-                    result += f"• Result: ❌ **Unhealthy** (Status: {test_response.status_code})\n"
-                    result += f"• Response: {test_response.text[:200]}...\n"
                 
             except requests.exceptions.ConnectionError:
                 result += f"• Result: ❌ **Connection Failed** - Application may be down\n"
@@ -1530,14 +1572,18 @@ async def test_health_endpoint(app_uuid: str) -> list[types.TextContent]:
             except Exception as test_error:
                 result += f"• Result: ❌ **Test Failed**: {str(test_error)}\n"
         else:
-            result += "⚠️ **Cannot test endpoint** - Missing FQDN or health path configuration\n"
+            result += "⚠️ **Cannot test endpoint** - Missing domain information or health path configuration\n"
         
         result += f"\n💡 **Recommendations:**\n"
         if not health_check_enabled:
             result += f"• Enable health checks with `coolify-update-health-check`\n"
-        if not fqdn:
-            result += f"• Configure custom domain or check port mappings\n"
+        if not best_domain:
+            result += f"• Configure custom domain or FQDN in Coolify application settings\n"
+            result += f"• Check port mappings configuration\n"
+        if best_domain and not health_check_path.startswith('/'):
+            result += f"• Ensure health check path starts with '/' (currently: {health_check_path})\n"
         result += f"• Check application logs with `coolify-get-application-logs`\n"
+        result += f"• Verify application is running with `coolify-get-application-info`\n"
         
         logger.info(f"Successfully tested health endpoint for application {app_uuid}")
         return [types.TextContent(type="text", text=result)]
