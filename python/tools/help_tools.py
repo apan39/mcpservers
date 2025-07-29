@@ -106,6 +106,25 @@ TOOL_METADATA = {
     "coolify-bulk-restart": {"category": "deployment", "complexity": "advanced", "tags": ["bulk", "restart", "efficiency"]},
     "coolify-bulk-deploy": {"category": "deployment", "complexity": "advanced", "tags": ["bulk", "deploy", "efficiency"]},
     "coolify-project-status": {"category": "monitoring", "complexity": "intermediate", "tags": ["status", "overview"]},
+    
+    # Database management
+    "coolify-list-databases": {"category": "coolify", "complexity": "basic", "tags": ["listing", "databases"]},
+    "coolify-get-database-by-uuid": {"category": "coolify", "complexity": "basic", "tags": ["info", "databases"]},
+    "coolify-create-database": {"category": "deployment", "complexity": "advanced", "tags": ["create", "databases"]},
+    "coolify-start-database": {"category": "deployment", "complexity": "intermediate", "tags": ["start", "databases"]},
+    "coolify-stop-database": {"category": "deployment", "complexity": "intermediate", "tags": ["stop", "databases"]},
+    "coolify-restart-database": {"category": "deployment", "complexity": "intermediate", "tags": ["restart", "databases"]},
+    "coolify-delete-database": {"category": "deployment", "complexity": "advanced", "tags": ["delete", "databases", "destructive"]},
+    
+    # Service management
+    "coolify-list-services": {"category": "coolify", "complexity": "basic", "tags": ["listing", "services"]},
+    "coolify-get-service-by-uuid": {"category": "coolify", "complexity": "basic", "tags": ["info", "services"]},
+    "coolify-create-service": {"category": "deployment", "complexity": "advanced", "tags": ["create", "services"]},
+    "coolify-start-service": {"category": "deployment", "complexity": "intermediate", "tags": ["start", "services"]},
+    "coolify-stop-service": {"category": "deployment", "complexity": "intermediate", "tags": ["stop", "services"]},
+    "coolify-restart-service": {"category": "deployment", "complexity": "intermediate", "tags": ["restart", "services"]},
+    "coolify-delete-service": {"category": "deployment", "complexity": "advanced", "tags": ["delete", "services", "destructive"]},
+    "coolify-manage-service-env": {"category": "config", "complexity": "advanced", "tags": ["environment", "services", "variables"]},
 }
 
 def register_help_tools(tool_registry):
@@ -425,7 +444,26 @@ async def get_tool_info(tool_name: str) -> list[types.TextContent]:
             "coolify-get-application-logs": "Get runtime logs from an application.",
             "coolify-bulk-restart": "Restart multiple applications simultaneously.",
             "coolify-bulk-deploy": "Deploy multiple applications simultaneously.",
-            "coolify-project-status": "Get comprehensive status for all applications in a project."
+            "coolify-project-status": "Get comprehensive status for all applications in a project.",
+            
+            # Database management descriptions
+            "coolify-list-databases": "List all databases in your Coolify instance with status and connection details.",
+            "coolify-get-database-by-uuid": "Get detailed information about a specific database including connection URLs.",
+            "coolify-create-database": "Create a new database (PostgreSQL, MySQL, MariaDB, MongoDB, Redis, DragonFly, KeyDB, Clickhouse).",
+            "coolify-start-database": "Start a stopped database instance.",
+            "coolify-stop-database": "Stop a running database instance.",
+            "coolify-restart-database": "Restart a database instance to apply configuration changes.",
+            "coolify-delete-database": "Permanently delete a database. Use with extreme caution!",
+            
+            # Service management descriptions
+            "coolify-list-services": "List all services in your Coolify instance with status information.",
+            "coolify-get-service-by-uuid": "Get detailed information about a specific service.",
+            "coolify-create-service": "Create a new service in Coolify from the 200+ available service templates.",
+            "coolify-start-service": "Start a stopped service instance.",
+            "coolify-stop-service": "Stop a running service instance.",
+            "coolify-restart-service": "Restart a service instance to apply configuration changes.",
+            "coolify-delete-service": "Permanently delete a service. Use with extreme caution!",
+            "coolify-manage-service-env": "Manage environment variables for a service (list, create, update, delete)."
         }
         
         description = tool_descriptions.get(tool_name, "No detailed description available.")
@@ -451,6 +489,22 @@ async def get_tool_info(tool_name: str) -> list[types.TextContent]:
                 "Please crawl https://example.com and extract only the main content",
                 "Get headings from https://docs.example.com",
                 "Crawl this page but exclude ads: https://news.site.com"
+            ],
+            "coolify-create-database": [
+                "Create a PostgreSQL database named 'myapp-db' for my application",
+                "Please create a Redis database for caching with name 'app-cache'"
+            ],
+            "coolify-list-databases": [
+                "Show me all databases in my Coolify instance",
+                "List all database with their connection status"
+            ],
+            "coolify-create-service": [
+                "Create a new service from the available templates",
+                "Please set up a monitoring service for my applications"
+            ],
+            "coolify-manage-service-env": [
+                "List all environment variables for my service",
+                "Add API_KEY environment variable to my service"
             ]
         }
         
@@ -502,7 +556,12 @@ async def get_learning_path(focus: str = "beginner") -> list[types.TextContent]:
             
             result += "**4. Basic Application Management** ⚙️\n"
             result += "• coolify-get-application-info → coolify-restart-application\n"
-            result += "• Learn to check and control your applications\n"
+            result += "• Learn to check and control your applications\n\n"
+            
+            result += "**5. Database and Service Basics** 🗄️\n"
+            result += "• coolify-list-databases → coolify-get-database-by-uuid\n"
+            result += "• coolify-list-services → coolify-get-service-by-uuid\n"
+            result += "• Learn about your infrastructure components\n"
             
         elif focus == "deployment":
             result += "**Master deployment workflows:**\n\n"
@@ -515,7 +574,12 @@ async def get_learning_path(focus: str = "beginner") -> list[types.TextContent]:
             result += "• coolify-deploy-application → coolify-watch-deployment\n"
             result += "• coolify-get-deployment-logs → coolify-get-deployment-info\n\n"
             
-            result += "**3. Bulk Operations** ⚡\n"
+            result += "**3. Database and Service Deployment** 🗄️\n"
+            result += "• coolify-create-database → coolify-start-database\n"
+            result += "• coolify-create-service → coolify-start-service\n"
+            result += "• Practice with different database types\n\n"
+            
+            result += "**4. Bulk Operations** ⚡\n"
             result += "• coolify-bulk-deploy → coolify-bulk-restart\n"
             result += "• coolify-deployment-metrics\n"
             
@@ -529,7 +593,12 @@ async def get_learning_path(focus: str = "beginner") -> list[types.TextContent]:
             result += "• coolify-get-application-logs → coolify-get-deployment-logs\n"
             result += "• coolify-get-recent-deployments\n\n"
             
-            result += "**3. Project Overview** 📈\n"
+            result += "**3. Database and Service Health** 🗄️\n"
+            result += "• coolify-list-databases → coolify-get-database-by-uuid\n"
+            result += "• coolify-list-services → coolify-get-service-by-uuid\n"
+            result += "• Monitor infrastructure components\n\n"
+            
+            result += "**4. Project Overview** 📈\n"
             result += "• coolify-project-status → coolify-deployment-metrics\n"
             
         elif focus == "configuration":
@@ -542,7 +611,11 @@ async def get_learning_path(focus: str = "beginner") -> list[types.TextContent]:
             result += "• coolify-update-build-settings\n"
             result += "• coolify-update-resource-limits\n\n"
             
-            result += "**3. Domains and Networking** 🌐\n"
+            result += "**3. Service Environment Management** 🔧\n"
+            result += "• coolify-manage-service-env (list, create, update, delete)\n"
+            result += "• Configure services with proper environment variables\n\n"
+            
+            result += "**4. Domains and Networking** 🌐\n"
             result += "• coolify-manage-domains\n"
             
         elif focus == "automation":
