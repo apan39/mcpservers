@@ -1891,7 +1891,7 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
         
         for i, deployment in enumerate(recent_deployments, 1):
             # Try different UUID field names that might be used
-            uuid = deployment.get('uuid', deployment.get('id', deployment.get('deployment_uuid', 'N/A')))
+            uuid = deployment.get('deployment_uuid', deployment.get('uuid', deployment.get('id', 'N/A')))
             status = deployment.get('status', 'N/A')
             created_at = deployment.get('created_at', deployment.get('started_at', 'N/A'))
             finished_at = deployment.get('finished_at', deployment.get('ended_at', ''))

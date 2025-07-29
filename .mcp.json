@@ -17,10 +17,10 @@
       "env": {}
     },
     "remote-python-tools": {
-      "type": "http", 
+      "type": "http",
       "url": "http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp",
       "headers": {
-        "Authorization": "Bearer ${MCP_API_KEY}",
+        "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
         "Content-Type": "application/json"
       }
     },
@@ -28,7 +28,7 @@
       "type": "http",
       "url": "http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp",
       "headers": {
-        "Authorization": "Bearer ${MCP_API_KEY}",
+        "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
         "Content-Type": "application/json"
       }
     },
@@ -44,7 +44,7 @@
       "type": "http",
       "url": "http://w8wcwg48ok4go8g8swgwkgk8.135.181.149.150.sslip.io/mcp",
       "headers": {
-        "Authorization": "Bearer ${MCP_API_KEY}",
+        "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
         "Content-Type": "application/json"
       }
     }
