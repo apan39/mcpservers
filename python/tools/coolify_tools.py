@@ -1865,12 +1865,20 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        # Get application info to find deployments
+        # Get application info for name
         app_response = await make_request_with_retry('GET', f"{base_url}/applications/{app_uuid}", headers)
         app_data = app_response.json()
-        
         app_name = app_data.get('name', 'N/A')
-        deployments = app_data.get('deployments', [])
+        
+        # Use the correct deployments endpoint
+        deployments_response = await make_request_with_retry('GET', f"{base_url}/deployments/applications/{app_uuid}", headers)
+        deployments_data = deployments_response.json()
+        
+        # Handle different response formats
+        if isinstance(deployments_data, dict):
+            deployments = deployments_data.get('data', deployments_data.get('deployments', []))
+        else:
+            deployments = deployments_data if isinstance(deployments_data, list) else []
         
         if not deployments:
             return [types.TextContent(type="text", text=f"📋 No deployments found for application **{app_name}**")]
@@ -1882,10 +1890,11 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
         result = f"📋 **Recent Deployments for {app_name}** (Last {len(recent_deployments)})\n\n"
         
         for i, deployment in enumerate(recent_deployments, 1):
-            uuid = deployment.get('uuid', 'N/A')
+            # Try different UUID field names that might be used
+            uuid = deployment.get('uuid', deployment.get('id', deployment.get('deployment_uuid', 'N/A')))
             status = deployment.get('status', 'N/A')
-            created_at = deployment.get('created_at', 'N/A')
-            finished_at = deployment.get('finished_at', '')
+            created_at = deployment.get('created_at', deployment.get('started_at', 'N/A'))
+            finished_at = deployment.get('finished_at', deployment.get('ended_at', ''))
             
             # Status emoji
             status_emojis = {
@@ -1932,12 +1941,20 @@ async def deployment_metrics(app_uuid: str, days: int = 30) -> list[types.TextCo
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        # Get application info with deployments
+        # Get application info for name
         app_response = await make_request_with_retry('GET', f"{base_url}/applications/{app_uuid}", headers)
         app_data = app_response.json()
-        
         app_name = app_data.get('name', 'N/A')
-        deployments = app_data.get('deployments', [])
+        
+        # Use the correct deployments endpoint
+        deployments_response = await make_request_with_retry('GET', f"{base_url}/deployments/applications/{app_uuid}", headers)
+        deployments_data = deployments_response.json()
+        
+        # Handle different response formats
+        if isinstance(deployments_data, dict):
+            deployments = deployments_data.get('data', deployments_data.get('deployments', []))
+        else:
+            deployments = deployments_data if isinstance(deployments_data, list) else []
         
         if not deployments:
             return [types.TextContent(type="text", text=f"📊 No deployment data available for **{app_name}**")]

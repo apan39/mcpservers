@@ -349,3 +349,36 @@ POST /api/v1/applications/{uuid}/restart  # Restart application
 ```
 
 This systematic approach using the Coolify API enables precise diagnosis and resolution of complex deployment issues that would be very difficult to debug through the web interface alone.
+
+## Recent Fixes and Updates
+
+### July 29, 2025: Fixed Deployment Logs Access Issue
+
+**Problem Identified:**
+- MCP Coolify tools `coolify-get-recent-deployments` was failing to find deployment records
+- Tool was using incorrect API endpoint `/applications/{uuid}` and expecting embedded deployment data
+- This prevented access to deployment logs for failed deployments
+
+**Root Cause:**
+- The function was calling `GET /applications/{uuid}` and looking for `deployments` field in the response
+- According to Coolify API documentation, deployments should be retrieved from dedicated endpoint
+- Embedded deployment data in application response was empty or non-existent
+
+**Solution Implemented:**
+- Updated `get_recent_deployments()` function in `/python/tools/coolify_tools.py`
+- Changed from: `GET /applications/{uuid}` → `GET /deployments/applications/{uuid}`
+- Added proper response format handling for both dict and list responses
+- Updated `deployment_metrics()` function with same fix
+- Enhanced UUID field extraction to handle different field names (`uuid`, `id`, `deployment_uuid`)
+
+**Verification:**
+- Successfully retrieved deployment record for failed deployment `skgo080ggw00gso4w8wc4ss4`
+- Deployment UUID `yg00gcc488ocsww4c4o8wc4ss4` was correctly identified
+- Full deployment logs now accessible showing exact failure: missing npm package `@radix-ui/react-button@^1.0.4`
+
+**Impact:**
+- MCP Coolify tools now properly retrieve deployment logs for both successful and failed deployments
+- Enables effective debugging of deployment failures that were previously invisible
+- Resolves the core issue where deployment logs appeared to be missing from the API
+
+This fix ensures that the MCP Coolify tools work as intended for deployment troubleshooting and monitoring.
