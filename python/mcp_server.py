@@ -23,6 +23,7 @@ from tools.math_tools import register_math_tools
 from tools.text_tools import register_text_tools
 from tools.crawl4ai_tools import register_crawl4ai_tools
 from tools.coolify_tools import register_coolify_tools
+from tools.help_tools import register_help_tools
 from utils.logger import setup_logger
 
 # Load environment variables from .env file
@@ -50,6 +51,7 @@ def setup_tools():
     register_text_tools(tool_registry)
     register_crawl4ai_tools(tool_registry)
     register_coolify_tools(tool_registry)
+    register_help_tools(tool_registry)
 
 async def handle_mcp_request(request: Request) -> JSONResponse:
     """Handle MCP JSON-RPC requests."""
