@@ -61,7 +61,27 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 - TypeScript MCP (UUID: k8wco488444c8gw0sscs04k8): `running:unhealthy` - 3 tools (needs investigation)
 - Browser-use MCP (UUID: w8wcwg48ok4go8g8swgwkgk8): `running:healthy` - 6+ browser automation tools
 
-**Last Deployment:** July 27, 2025 - GitHub repository refresh triggered for all applications
+**Last Deployment:** July 30, 2025 - Comprehensive API endpoint fixes deployed and verified working
+
+### 6. MCP Coolify Tools Status - FULLY OPERATIONAL ✅
+
+**Environment Variable Management (FIXED):**
+- ✅ `coolify-set-env-variable` - Create/update variables (409 conflicts resolved)  
+- ✅ `coolify-delete-env-variable` - Delete variables (404 errors resolved)
+- ✅ `coolify-bulk-update-env` - Bulk operations (all issues resolved)
+
+**Deployment Management (FIXED):**
+- ✅ `coolify-get-recent-deployments` - Access deployment history (404 errors resolved)
+- ✅ `coolify-get-deployment-logs` - Full log access working
+- ✅ `coolify-deploy-application` - Trigger deployments working
+
+**All Core Operations:**
+- ✅ `coolify-list-applications` - Working perfectly
+- ✅ `coolify-get-application-info` - Working perfectly  
+- ✅ `coolify-restart-application` - Working perfectly
+- ✅ All 15+ Coolify management tools now fully operational
+
+**API Compliance:** All tools now conform to official Coolify API specification
 
 ### 6. Communication Guidelines
 - **Never assume deployment success** without explicit verification

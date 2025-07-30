@@ -382,3 +382,53 @@ This systematic approach using the Coolify API enables precise diagnosis and res
 - Resolves the core issue where deployment logs appeared to be missing from the API
 
 This fix ensures that the MCP Coolify tools work as intended for deployment troubleshooting and monitoring.
+
+### July 30, 2025: Comprehensive API Endpoint Fixes
+
+**Problems Identified:**
+1. Environment variable management returning 409 Conflict errors on updates
+2. Environment variable deletion returning 404 errors with malformed URLs
+3. Remaining deployment endpoint issues
+4. Incorrect HTTP methods being used for API operations
+
+**Root Causes:**
+1. **Environment Variable Updates**: Using PUT method instead of PATCH as specified in official Coolify API documentation
+2. **Environment Variable Deletion**: Using incorrect field name (`id` instead of `uuid`) in DELETE URLs
+3. **API Method Mismatch**: Implementation didn't match official Coolify API specification
+
+**Solutions Implemented:**
+
+**Environment Variable API Corrections:**
+- **UPDATE Operations**: Changed from `PUT /applications/{uuid}/envs/{env_id}` → `PATCH /applications/{uuid}/envs`
+- **DELETE Operations**: Changed from `DELETE /applications/{uuid}/envs/{env_id}` → `DELETE /applications/{uuid}/envs/{env_uuid}`
+- **Bulk Operations**: Updated to use PATCH method consistently
+- **Request Handler**: Added PATCH method support to HTTP request retry logic
+
+**Official API Compliance:**
+- Consulted official Coolify API documentation at https://coolify.io/docs/api-reference/api/
+- Verified correct endpoint patterns for all environment variable operations
+- Implemented proper request body schemas as specified in documentation
+
+**Verification Results:**
+```bash
+# All operations now work correctly:
+✅ coolify-set-env-variable (CREATE) - Success
+✅ coolify-set-env-variable (UPDATE) - Success (no more 409 conflicts)
+✅ coolify-delete-env-variable - Success (no more 404 errors)
+✅ coolify-bulk-update-env - Success (all variables processed)
+✅ coolify-get-recent-deployments - Success (no more 404 errors)
+```
+
+**Testing Results:**
+- Created TEST_VAR successfully
+- Updated TEST_VAR to new value successfully  
+- Deleted TEST_VAR successfully
+- Bulk created 3 variables (TEST_BULK_1, TEST_BULK_2, TEST_BULK_3) successfully
+- Retrieved recent deployments successfully
+
+**Impact:**
+- All reported MCP Coolify tool issues are now resolved
+- Environment variable management is fully functional
+- Deployment monitoring and logs access working correctly
+- Tools now fully comply with official Coolify API specification
+- Enables complete CI/CD automation and environment management through MCP tools
