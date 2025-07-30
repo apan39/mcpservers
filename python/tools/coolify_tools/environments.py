@@ -15,6 +15,8 @@ async def make_request_with_retry(method, url, headers, json=None, retries=2):
                 response = requests.post(url, headers=headers, json=json, timeout=30)
             elif method.upper() == 'PUT':
                 response = requests.put(url, headers=headers, json=json, timeout=30)
+            elif method.upper() == 'PATCH':
+                response = requests.patch(url, headers=headers, json=json, timeout=30)
             elif method.upper() == 'DELETE':
                 response = requests.delete(url, headers=headers, timeout=30)
             else:
@@ -47,8 +49,7 @@ async def set_env_variable(app_uuid: str, key: str, value: str, is_preview: bool
                         break
             
             if existing_var:
-                # Update existing variable using PUT
-                env_id = existing_var.get('id')
+                # Update existing variable using PATCH
                 env_data = {
                     "key": key,
                     "value": value,
@@ -58,7 +59,7 @@ async def set_env_variable(app_uuid: str, key: str, value: str, is_preview: bool
                 }
                 
                 response = await make_request_with_retry(
-                    'PUT', f"{base_url}/applications/{app_uuid}/envs/{env_id}", headers, json=env_data
+                    'PATCH', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
                 )
             else:
                 # Create new variable using POST
@@ -132,9 +133,9 @@ async def delete_env_variable(app_uuid: str, key: str, is_preview: bool = False)
             env_type = "preview" if is_preview else "production"
             return [types.TextContent(type="text", text=f"❌ Environment variable **{key}** not found in {env_type} environment")]
         
-        # Delete the environment variable
-        env_id = env_to_delete.get('id')
-        await make_request_with_retry('DELETE', f"{base_url}/applications/{app_uuid}/envs/{env_id}", headers)
+        # Delete the environment variable  
+        env_uuid = env_to_delete.get('uuid', env_to_delete.get('id'))
+        await make_request_with_retry('DELETE', f"{base_url}/applications/{app_uuid}/envs/{env_uuid}", headers)
         
         env_type = "Preview" if is_preview else "Production"
         result = f"🗑️ Environment variable **{key}** deleted successfully!\n\n"
@@ -200,8 +201,7 @@ async def bulk_update_env(app_uuid: str, env_vars: str, is_preview: bool = False
                             break
                 
                 if existing_var:
-                    # Update existing variable
-                    env_id = existing_var.get('id')
+                    # Update existing variable using PATCH
                     env_data = {
                         "key": key,
                         "value": value,
@@ -211,7 +211,7 @@ async def bulk_update_env(app_uuid: str, env_vars: str, is_preview: bool = False
                     }
                     
                     await make_request_with_retry(
-                        'PUT', f"{base_url}/applications/{app_uuid}/envs/{env_id}", headers, json=env_data
+                        'PATCH', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
                     )
                 else:
                     # Create new variable
