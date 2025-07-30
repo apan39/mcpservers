@@ -142,7 +142,7 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        response = requests.get(f"{base_url}/applications/{app_uuid}/deployments", headers=headers, timeout=30)
+        response = requests.get(f"{base_url}/deployments/applications/{app_uuid}", headers=headers, timeout=30)
         response.raise_for_status()
         
         deployments = response.json()
@@ -206,7 +206,7 @@ async def deployment_metrics(app_uuid: str, days: int = 30) -> list[types.TextCo
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        response = requests.get(f"{base_url}/applications/{app_uuid}/deployments", headers=headers, timeout=30)
+        response = requests.get(f"{base_url}/deployments/applications/{app_uuid}", headers=headers, timeout=30)
         response.raise_for_status()
         
         deployments = response.json()

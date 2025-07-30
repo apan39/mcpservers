@@ -13,6 +13,8 @@ async def make_request_with_retry(method, url, headers, json=None, retries=2):
                 response = requests.get(url, headers=headers, timeout=30)
             elif method.upper() == 'POST':
                 response = requests.post(url, headers=headers, json=json, timeout=30)
+            elif method.upper() == 'PUT':
+                response = requests.put(url, headers=headers, json=json, timeout=30)
             elif method.upper() == 'DELETE':
                 response = requests.delete(url, headers=headers, timeout=30)
             else:
@@ -31,18 +33,61 @@ async def set_env_variable(app_uuid: str, key: str, value: str, is_preview: bool
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        # Prepare environment variable data
-        env_data = {
-            "key": key,
-            "value": value,
-            "is_preview": is_preview,
-            "is_build_time": False,  # Default to runtime variable
-            "is_literal": False
-        }
-        
-        response = await make_request_with_retry(
-            'POST', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
-        )
+        # First, check if the variable already exists
+        try:
+            env_response = await make_request_with_retry('GET', f"{base_url}/applications/{app_uuid}/envs", headers)
+            existing_vars = env_response.json()
+            
+            # Find existing variable
+            existing_var = None
+            if isinstance(existing_vars, list):
+                for env_var in existing_vars:
+                    if env_var.get('key') == key and env_var.get('is_preview', False) == is_preview:
+                        existing_var = env_var
+                        break
+            
+            if existing_var:
+                # Update existing variable using PUT
+                env_id = existing_var.get('id')
+                env_data = {
+                    "key": key,
+                    "value": value,
+                    "is_preview": is_preview,
+                    "is_build_time": existing_var.get('is_build_time', False),
+                    "is_literal": existing_var.get('is_literal', False)
+                }
+                
+                response = await make_request_with_retry(
+                    'PUT', f"{base_url}/applications/{app_uuid}/envs/{env_id}", headers, json=env_data
+                )
+            else:
+                # Create new variable using POST
+                env_data = {
+                    "key": key,
+                    "value": value,
+                    "is_preview": is_preview,
+                    "is_build_time": False,  # Default to runtime variable
+                    "is_literal": False
+                }
+                
+                response = await make_request_with_retry(
+                    'POST', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
+                )
+                
+        except Exception as check_error:
+            # If we can't check existing variables, try to create new one
+            logger.warning(f"Could not check existing variables, attempting to create: {check_error}")
+            env_data = {
+                "key": key,
+                "value": value,
+                "is_preview": is_preview,  
+                "is_build_time": False,
+                "is_literal": False
+            }
+            
+            response = await make_request_with_retry(
+                'POST', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
+            )
         
         env_type = "Preview" if is_preview else "Production"
         # Mask sensitive values in output
@@ -137,19 +182,51 @@ async def bulk_update_env(app_uuid: str, env_vars: str, is_preview: bool = False
         success_count = 0
         failed_vars = []
         
+        # Get existing variables once for efficiency
+        try:
+            env_response = await make_request_with_retry('GET', f"{base_url}/applications/{app_uuid}/envs", headers)
+            existing_vars = env_response.json() if env_response else []
+        except Exception:
+            existing_vars = []
+        
         for key, value in variables:
             try:
-                env_data = {
-                    "key": key,
-                    "value": value,
-                    "is_preview": is_preview,
-                    "is_build_time": False,
-                    "is_literal": False
-                }
+                # Find existing variable
+                existing_var = None
+                if isinstance(existing_vars, list):
+                    for env_var in existing_vars:
+                        if env_var.get('key') == key and env_var.get('is_preview', False) == is_preview:
+                            existing_var = env_var
+                            break
                 
-                await make_request_with_retry(
-                    'POST', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
-                )
+                if existing_var:
+                    # Update existing variable
+                    env_id = existing_var.get('id')
+                    env_data = {
+                        "key": key,
+                        "value": value,
+                        "is_preview": is_preview,
+                        "is_build_time": existing_var.get('is_build_time', False),
+                        "is_literal": existing_var.get('is_literal', False)
+                    }
+                    
+                    await make_request_with_retry(
+                        'PUT', f"{base_url}/applications/{app_uuid}/envs/{env_id}", headers, json=env_data
+                    )
+                else:
+                    # Create new variable
+                    env_data = {
+                        "key": key,
+                        "value": value,
+                        "is_preview": is_preview,
+                        "is_build_time": False,
+                        "is_literal": False
+                    }
+                    
+                    await make_request_with_retry(
+                        'POST', f"{base_url}/applications/{app_uuid}/envs", headers, json=env_data
+                    )
+                    
                 success_count += 1
                 
             except Exception as var_error:
