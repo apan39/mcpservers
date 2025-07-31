@@ -30,7 +30,7 @@ async function callContext7Tool(toolName: string, params: any): Promise<any> {
       throw new Error(`Context7 server error: ${response.status} ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
     
     if (result.error) {
       throw new Error(`Context7 tool error: ${result.error.message}`);
@@ -273,7 +273,10 @@ export function registerContext7Tools(server: McpServer) {
             if (preferences.react) query += " react";
             if (preferences.latest) query += " latest version";
             
-            // Extract library ID from previous resolve result
+            // First resolve the library ID
+            const resolveResult = await callContext7Tool('resolve-library-id', { libraryName: library });
+            
+            // Extract library ID from resolve result
             const resolveText = Array.isArray(resolveResult.content) 
               ? resolveResult.content.map((c: any) => c.text || c.content || '').join(' ')
               : (resolveResult.content.text || resolveResult.content || '');
