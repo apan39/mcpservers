@@ -14,6 +14,7 @@ import {
 
 import { registerPlaywrightTools } from "./playwrightTools.js";
 import { registerFlowiseTools } from "./flowiseTools.js";
+import { registerContext7Tools } from "./context7Tools.js";
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -250,6 +251,9 @@ function createMCPServer(): McpServer {
   // Register Flowise tools
   registerFlowiseTools(server);
   
+  // Register Context7 tools
+  registerContext7Tools(server);
+  
   return server;
 }
 
@@ -464,6 +468,111 @@ app.post("/mcp", async (req: Request, res: Response) => {
                 type: "object",
                 properties: {}
               }
+            },
+            {
+              name: "context7-get-docs",
+              description: "Get up-to-date documentation and code examples for a library using context7",
+              inputSchema: {
+                type: "object",
+                required: ["library"],
+                properties: {
+                  library: {
+                    type: "string",
+                    description: "Library name or identifier (e.g., 'react', 'next.js', 'typescript')"
+                  },
+                  version: {
+                    type: "string",
+                    description: "Specific version to get docs for (optional, uses latest if not specified)"
+                  },
+                  query: {
+                    type: "string",
+                    description: "Specific query or topic within the library documentation"
+                  }
+                }
+              }
+            },
+            {
+              name: "context7-search-examples",
+              description: "Search for code examples and usage patterns for a specific library or framework",
+              inputSchema: {
+                type: "object",
+                required: ["library", "pattern"],
+                properties: {
+                  library: {
+                    type: "string",
+                    description: "Library name to search examples for"
+                  },
+                  pattern: {
+                    type: "string",
+                    description: "Specific pattern, function, or use case to find examples for"
+                  },
+                  language: {
+                    type: "string",
+                    description: "Programming language preference (e.g., 'typescript', 'javascript')"
+                  }
+                }
+              }
+            },
+            {
+              name: "context7-library-info",
+              description: "Get general information and latest version details for a library",
+              inputSchema: {
+                type: "object",
+                required: ["library"],
+                properties: {
+                  library: {
+                    type: "string",
+                    description: "Library name to get information for"
+                  }
+                }
+              }
+            },
+            {
+              name: "context7-ai-context",
+              description: "Get comprehensive context for AI coding assistance with up-to-date library information",
+              inputSchema: {
+                type: "object",
+                required: ["libraries", "task"],
+                properties: {
+                  libraries: {
+                    type: "array",
+                    items: {
+                      type: "string"
+                    },
+                    description: "Array of library names to get context for"
+                  },
+                  task: {
+                    type: "string",
+                    description: "Description of the coding task or what you're trying to build"
+                  },
+                  preferences: {
+                    type: "object",
+                    properties: {
+                      typescript: {
+                        type: "boolean",
+                        description: "Prefer TypeScript examples"
+                      },
+                      react: {
+                        type: "boolean",
+                        description: "Focus on React-related examples"
+                      },
+                      latest: {
+                        type: "boolean",
+                        description: "Only use latest versions"
+                      }
+                    },
+                    description: "Preferences for the context gathering"
+                  }
+                }
+              }
+            },
+            {
+              name: "context7-server-status",
+              description: "Check if context7 MCP server is running and get connection info",
+              inputSchema: {
+                type: "object",
+                properties: {}
+              }
             }
           ]
         }
@@ -534,6 +643,24 @@ app.post("/mcp", async (req: Request, res: Response) => {
               {
                 type: "text",
                 text: `Flowise tool "${name}" requires the advanced MCP endpoint. Use /mcp-advanced instead.`
+              }
+            ]
+          }
+        });
+        return;
+      }
+
+      // Handle Context7 tools
+      if (name.startsWith("context7-")) {
+        // For the simple endpoint, just pass through to advanced endpoint
+        res.json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Context7 tool "${name}" requires the advanced MCP endpoint. Use /mcp-advanced instead.`
               }
             ]
           }
