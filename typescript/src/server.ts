@@ -616,19 +616,86 @@ app.post("/mcp", async (req: Request, res: Response) => {
       }
 
       if (name === "scrape-dynamic-url") {
-        // Basic implementation - you can enhance this
-        res.json({
-          jsonrpc: "2.0",
-          id,
-          result: {
-            content: [
-              {
-                type: "text",
-                text: `Would scrape URL: ${args.url} (Playwright tool not implemented in simplified mode)`
+        // Direct implementation using Playwright
+        try {
+          const { chromium } = await import("playwright");
+          let browser = null;
+          
+          try {
+            // Validate URL and provide helpful error for localhost
+            const parsedUrl = new URL(args.url);
+            if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
+              res.json({
+                jsonrpc: "2.0",
+                id,
+                result: {
+                  content: [
+                    {
+                      type: "text",
+                      text: `⚠️  Cannot access localhost from external server. 
+Solutions:
+1. Use ngrok: 'ngrok http ${parsedUrl.port || '3000'}' then use the ngrok URL
+2. Use your local IP instead of localhost (e.g., http://192.168.1.100:${parsedUrl.port || '3000'})
+3. Deploy your app to a public URL
+4. Run this MCP server locally instead`,
+                    },
+                  ],
+                }
+              });
+              return;
+            }
+            
+            browser = await chromium.launch({ 
+              headless: true,
+              timeout: args.timeout || 10000
+            });
+            const context = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              ignoreHTTPSErrors: args.ignoreHTTPSErrors || false
+            });
+            const page = await context.newPage();
+            
+            await page.goto(args.url, { 
+              waitUntil: "domcontentloaded",
+              timeout: args.timeout || 10000
+            });
+            
+            // Wait for specific selector if provided
+            if (args.waitFor) {
+              await page.waitForSelector(args.waitFor, { timeout: args.timeout || 10000 });
+            }
+            
+            const text = await page.evaluate(() => document.body.innerText);
+            
+            res.json({
+              jsonrpc: "2.0",
+              id,
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: text.trim(),
+                  },
+                ],
               }
-            ]
+            });
+            
+          } finally {
+            if (browser) {
+              await browser.close();
+            }
           }
-        });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error scraping URL: ${errorMessage}`
+            }
+          });
+        }
         return;
       }
 
@@ -761,7 +828,7 @@ app.post("/mcp-advanced", async (req: Request, res: Response) => {
 });
 
 // SSE endpoints for MCP Inspector compatibility
-app.get("/sse", async (req: Request, res: Response) => {
+app.get("/sse", async (_req: Request, res: Response) => {
   try {
     const transport = new SSEServerTransport("/messages", res);
     sseTransports[transport.sessionId] = transport;

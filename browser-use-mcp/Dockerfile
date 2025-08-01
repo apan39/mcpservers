@@ -25,18 +25,20 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
+# Create non-root user first
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
+# Switch to appuser before installing Playwright
+USER appuser
+
+# Install Playwright browsers as appuser
 RUN playwright install chromium
 
 # Copy application code
-COPY . .
-
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
+COPY --chown=appuser:appuser . .
 
 # Expose port
 EXPOSE 3000
