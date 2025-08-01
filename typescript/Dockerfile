@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y \
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy project files
 COPY . .
@@ -29,7 +29,10 @@ COPY . .
 RUN npm run build
 
 # Install Playwright browsers with dependencies
-RUN npx playwright install --with-deps chromium
+RUN npx playwright install chromium
+
+# Remove devDependencies to reduce image size
+RUN npm prune --production
 
 # Expose port
 EXPOSE 3010
