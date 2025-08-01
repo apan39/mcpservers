@@ -142,7 +142,7 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        response = requests.get(f"{base_url}/deployments/applications/{app_uuid}", headers=headers, timeout=30)
+        response = requests.get(f"{base_url}/deployments/by-app-uuid?uuid={app_uuid}", headers=headers, timeout=30)
         response.raise_for_status()
         
         deployments = response.json()
@@ -206,7 +206,7 @@ async def deployment_metrics(app_uuid: str, days: int = 30) -> list[types.TextCo
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        response = requests.get(f"{base_url}/deployments/applications/{app_uuid}", headers=headers, timeout=30)
+        response = requests.get(f"{base_url}/deployments/by-app-uuid?uuid={app_uuid}", headers=headers, timeout=30)
         response.raise_for_status()
         
         deployments = response.json()
@@ -313,6 +313,56 @@ async def deployment_metrics(app_uuid: str, days: int = 30) -> list[types.TextCo
         error_msg = format_enhanced_error(e, f"Unexpected error while getting deployment metrics for {app_uuid}", "coolify-deployment-metrics")
         return [types.TextContent(type="text", text=error_msg)]
 
+async def get_application_logs(app_uuid: str, lines: int = 100) -> list[types.TextContent]:
+    """Get runtime logs for an application."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.get(f"{base_url}/applications/{app_uuid}/logs?lines={lines}", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        logs_data = response.json()
+        logger.info(f"Successfully retrieved application logs for {app_uuid}")
+        
+        result = f"📋 **Application Logs for {app_uuid}**\n\n"
+        
+        # Process logs based on response format
+        if isinstance(logs_data, dict):
+            logs = logs_data.get('logs', logs_data.get('data', []))
+        else:
+            logs = logs_data
+        
+        if isinstance(logs, list):
+            for log_entry in logs[-lines:]:
+                if isinstance(log_entry, dict):
+                    timestamp = log_entry.get('timestamp', '')
+                    message = log_entry.get('message', log_entry.get('output', ''))
+                    level = log_entry.get('level', log_entry.get('type', 'INFO'))
+                    
+                    if timestamp:
+                        result += f"[{timestamp}] {level}: {message}\n"
+                    else:
+                        result += f"{level}: {message}\n"
+                else:
+                    result += f"LOG: {log_entry}\n"
+        elif isinstance(logs, str):
+            # If logs are returned as a single string
+            result += logs
+        else:
+            result += f"Logs data: {logs}"
+        
+        return [types.TextContent(type="text", text=result)]
+        
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"Failed to get application logs for {app_uuid}: {e}")
+        error_msg = handle_requests_error(e, f"Unable to get application logs for {app_uuid}", "coolify-get-application-logs")
+        return [types.TextContent(type="text", text=error_msg)]
+    except Exception as e:
+        logger.error(f"Failed to get application logs for {app_uuid}: {e}")
+        error_msg = format_enhanced_error(e, f"Unexpected error while getting application logs for {app_uuid}", "coolify-get-application-logs")
+        return [types.TextContent(type="text", text=error_msg)]
+
 # Tool registration dictionary
 DEPLOYMENT_TOOLS = {
     "coolify-get-deployment-logs": {
@@ -405,5 +455,28 @@ DEPLOYMENT_TOOLS = {
             }
         ),
         "handler": deployment_metrics
+    },
+    
+    "coolify-get-application-logs": {
+        "definition": types.Tool(
+            name="coolify-get-application-logs",
+            description="Get runtime logs for an application.",
+            inputSchema={
+                "type": "object",
+                "required": ["app_uuid"],
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application to get logs for"
+                    },
+                    "lines": {
+                        "type": "integer",
+                        "description": "Number of recent log lines to show",
+                        "default": 100
+                    }
+                }
+            }
+        ),
+        "handler": get_application_logs
     }
 }
