@@ -645,15 +645,6 @@ Solutions:
               return;
             }
             
-            // Debug logging
-            console.log('Server.ts - Current user:', process.env.USER || 'unknown');
-            console.log('Server.ts - Home directory:', process.env.HOME || 'unknown');
-            
-            // Set up Playwright environment
-            const browserPath = process.env.HOME ? `${process.env.HOME}/.cache/ms-playwright` : '/home/appuser/.cache/ms-playwright';
-            process.env.PLAYWRIGHT_BROWSERS_PATH = browserPath;
-            console.log('Server.ts - Setting PLAYWRIGHT_BROWSERS_PATH to:', browserPath);
-            
             browser = await chromium.launch({ 
               headless: true,
               timeout: args.timeout || 10000

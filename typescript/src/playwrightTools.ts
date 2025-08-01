@@ -36,16 +36,6 @@ Solutions:
           };
         }
         
-        // Debug logging to understand the issue
-        console.log('Current user:', process.env.USER || 'unknown');
-        console.log('Home directory:', process.env.HOME || 'unknown');
-        console.log('Process UID:', process.getuid ? process.getuid() : 'unknown');
-        
-        // Set up Playwright environment and try to find the correct browser path
-        const browserPath = process.env.HOME ? `${process.env.HOME}/.cache/ms-playwright` : '/home/appuser/.cache/ms-playwright';
-        process.env.PLAYWRIGHT_BROWSERS_PATH = browserPath;
-        console.log('Setting PLAYWRIGHT_BROWSERS_PATH to:', browserPath);
-        
         browser = await chromium.launch({ 
           headless: true,
           timeout: timeout
