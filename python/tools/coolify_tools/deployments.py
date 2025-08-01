@@ -32,56 +32,41 @@ Finished: {finished_at}
 
 """
         
-        # Check logs size before processing
+        # Check logs size and apply 25% truncation if over 25,000 tokens
         logs_data = deployment_data.get('logs', [])
+        logs_str = str(logs_data)
+        estimated_tokens = len(logs_str) // 4  # Rough approximation: 1 token ≈ 4 characters
         
-        # Debug: Check actual log data type and size
-        logger.info(f"Logs data type: {type(logs_data)}, size: {len(str(logs_data))}")
+        logger.info(f"Logs data type: {type(logs_data)}, estimated tokens: {estimated_tokens}")
         
-        # Immediately truncate if response is too large
-        if len(str(logs_data)) > 50000:  # Extremely aggressive limit
-            result += f"⚠️ **Massive Log Response** ({len(str(logs_data)):,} chars)\n\n"
-            result += "**🔴 Response too large to process safely**\n"
-            result += "**Status:** Deployment completed but logs are extensive\n"
-            result += "**Recommendation:** Check Coolify UI for full deployment logs\n"
+        # If over 25,000 tokens, show only first 25%
+        if estimated_tokens > 25000:
+            result += f"⚠️ **Large Log File** ({estimated_tokens:,} estimated tokens)\n"
+            result += "**Showing first 25% of logs due to size**\n\n"
+            
+            # Take first 25% of the content
+            first_quarter_size = len(logs_str) // 4
+            truncated_logs = logs_str[:first_quarter_size]
+            
+            # Find last complete line to avoid cutting mid-sentence
+            last_newline = truncated_logs.rfind('\n')
+            if last_newline > 0:
+                truncated_logs = truncated_logs[:last_newline]
+            
+            result += f"**📋 Deployment Logs** (First 25%):\n\n"
+            result += f"{truncated_logs}\n\n"
+            result += f"**ℹ️ Showing {len(truncated_logs):,} of {len(logs_str):,} characters**\n"
+            result += f"**💡 View complete logs in Coolify UI**"
+            
             return [types.TextContent(type="text", text=result)]
         
-        # If logs are a string, be extremely aggressive with truncation
-        if isinstance(logs_data, str):
-            if len(logs_data) > 1000:  # Very small threshold
-                result += f"⚠️ **Large Log File** ({len(logs_data):,} chars) - Summary Only\n\n"
-                
-                # Find the main error quickly
-                lines = logs_data.split('\n')
-                error_found = False
-                
-                for line in lines:
-                    if 'npm error' in line.lower() or 'eresolve' in line.lower():
-                        result += f"**🔴 Main Error:** {line[:200]}...\n"
-                        error_found = True
-                        break
-                
-                if not error_found:
-                    for line in lines:
-                        if any(keyword in line.lower() for keyword in ['error', 'failed', 'exit code']):
-                            result += f"**🔴 Error:** {line[:150]}...\n"
-                            break
-                
-                # Show last line only
-                last_line = [line for line in lines[-3:] if line.strip()][-1] if lines else ""
-                if last_line:
-                    result += f"**📄 Final:** {last_line[:100]}...\n"
-                        
-                result += f"\n💡 Use Coolify UI for full logs"
-                return [types.TextContent(type="text", text=result)]
-        
-        # Process normally sized logs
+        # Process smaller logs normally
         if isinstance(logs_data, str):
             import json
             try:
                 logs_data = json.loads(logs_data)
             except:
-                result += f"**Raw Logs:**\n{logs_data[:3000]}{'...' if len(logs_data) > 3000 else ''}"
+                result += f"**📋 Deployment Logs:**\n\n{logs_data}"
                 return [types.TextContent(type="text", text=result)]
         
         if isinstance(logs_data, list):
@@ -101,13 +86,11 @@ Finished: {finished_at}
                         continue
                     
                     if output.strip():
-                        truncated_output = output[:400] + "..." if len(output) > 400 else output
-                        result += f"**{log_type.upper()}:** {truncated_output}\n\n"
+                        result += f"**{log_type.upper()}:** {output}\n\n"
                 else:
-                    truncated_entry = str(log_entry)[:400] + "..." if len(str(log_entry)) > 400 else str(log_entry)
-                    result += f"**LOG:** {truncated_entry}\n\n"
+                    result += f"**LOG:** {log_entry}\n\n"
         else:
-            result += f"**Logs Data:** {str(logs_data)[:1000]}{'...' if len(str(logs_data)) > 1000 else ''}"
+            result += f"**📋 Deployment Logs:**\n\n{logs_data}"
         
         return [types.TextContent(type="text", text=result)]
         
