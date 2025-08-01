@@ -918,6 +918,7 @@ async def manage_domains(app_uuid: str, action: str, domain: str = None) -> list
             result += f"• Custom Domains: {domains or 'None configured'}\n\n"
             
             result += f"💡 **Domain Management:**\n"
+            result += f"• Set Primary FQDN: `coolify-set-fqdn --app_uuid {app_uuid} --fqdn your-domain.com`\n"
             result += f"• Add domain: `coolify-manage-domains --action add --domain example.com`\n"
             result += f"• Remove domain: `coolify-manage-domains --action remove --domain example.com`\n"
             
@@ -977,6 +978,115 @@ async def manage_domains(app_uuid: str, action: str, domain: str = None) -> list
     except Exception as e:
         logger.error(f"Failed to manage domains for {app_uuid}: {e}")
         return [types.TextContent(type="text", text=f"❌ Failed to manage domains: {str(e)}\n\n💡 **Troubleshooting:**\n• Verify application UUID is correct\n• Check if domain format is valid\n• Ensure sufficient permissions")]
+
+
+async def set_fqdn(app_uuid: str, fqdn: str = None) -> list[types.TextContent]:
+    """Set the Primary FQDN for an application."""
+    
+    # Usage guidance and parameter validation
+    if not app_uuid:
+        return [types.TextContent(type="text", text="""❌ **Missing Required Parameter: app_uuid**
+
+🔧 **Usage:**
+```bash
+coolify-set-fqdn --app_uuid APPLICATION_UUID_HERE --fqdn your-domain.com
+```
+
+📋 **Required Parameters:**
+• **app_uuid**: Application UUID
+• **fqdn**: Fully Qualified Domain Name (e.g., 'api.example.com', 'myapp.domain.com')
+
+💡 **Examples:**
+```bash
+# Set Primary FQDN for an application
+coolify-set-fqdn --app_uuid wcs4kc88cow4wc0gs0g404co --fqdn myapp.example.com
+
+# Set subdomain FQDN
+coolify-set-fqdn --app_uuid abc123 --fqdn api.mydomain.com
+```
+
+🚀 **Get Application UUIDs:**
+• List all applications: `coolify-list-applications`
+
+💡 **What this does:**
+• Sets the Primary FQDN field in Coolify
+• Enables external domain routing
+• Fixes 404 errors for new applications
+• Required for proper domain configuration
+""")]
+    
+    if not fqdn:
+        return [types.TextContent(type="text", text="""❌ **Missing Required Parameter: fqdn**
+
+🔧 **Usage:**
+```bash
+coolify-set-fqdn --app_uuid APPLICATION_UUID_HERE --fqdn your-domain.com
+```
+
+📋 **FQDN Requirements:**
+• Must be a valid domain name (e.g., 'api.example.com')
+• Should point to your server's IP address via DNS
+• Can be a subdomain or root domain
+• Must not include http:// or https:// prefix
+
+💡 **Valid FQDN Examples:**
+• myapp.example.com
+• api.mydomain.org  
+• service.company.net
+• app.localhost (for local development)
+""")]
+    
+    if len(app_uuid) < 20:  # Basic UUID length check
+        return [types.TextContent(type="text", text=f"""❌ **Invalid app_uuid: {app_uuid}**
+
+The app_uuid appears to be invalid. Application UUIDs should be long alphanumeric strings like: `wcs4kc88cow4wc0gs0g404co`
+
+💡 **Get valid application UUIDs:**
+```bash
+coolify-list-applications
+```
+""")]
+    
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        # Get current application info first
+        app_response = await make_request_with_retry('GET', f"{base_url}/applications/{app_uuid}", headers)
+        app_data = app_response.json()
+        
+        app_name = app_data.get('name', 'N/A')
+        current_fqdn = app_data.get('fqdn', '')
+        
+        # Update the FQDN
+        update_data = {"fqdn": fqdn}
+        
+        await make_request_with_retry(
+            'PUT', f"{base_url}/applications/{app_uuid}", headers, json=update_data
+        )
+        
+        result = f"🌐 **Primary FQDN set successfully!**\n\n"
+        result += f"**Application:** {app_name}\n"
+        result += f"**Previous FQDN:** {current_fqdn or 'Not set'}\n"
+        result += f"**New FQDN:** {fqdn}\n\n"
+        
+        result += f"💡 **Next Steps:**\n"
+        result += f"1. **Configure DNS:** Point {fqdn} to your server IP\n"
+        result += f"2. **Restart Application:** `coolify-restart-application --app_uuid {app_uuid}`\n"
+        result += f"3. **Test Domain:** Visit http://{fqdn} or https://{fqdn}\n"
+        result += f"4. **Verify SSL:** Coolify will automatically provision SSL certificates\n\n"
+        
+        result += f"🔍 **Verification:**\n"
+        result += f"• Check domain status: `coolify-manage-domains --app_uuid {app_uuid} --action list`\n"
+        result += f"• Test health endpoint: `coolify-test-health-endpoint --app_uuid {app_uuid}`\n"
+        result += f"• View application info: `coolify-get-application-info --app_uuid {app_uuid}`\n"
+        
+        logger.info(f"Successfully set FQDN {fqdn} for application {app_uuid}")
+        return [types.TextContent(type="text", text=result)]
+        
+    except Exception as e:
+        logger.error(f"Failed to set FQDN for {app_uuid}: {e}")
+        return [types.TextContent(type="text", text=f"❌ Failed to set FQDN: {str(e)}\n\n💡 **Troubleshooting:**\n• Verify application UUID is correct\n• Check if FQDN format is valid (no http/https prefix)\n• Ensure sufficient API permissions\n• Try setting a simple domain first")]
 
 
 async def update_resource_limits(app_uuid: str, **kwargs) -> list[types.TextContent]:
@@ -1858,5 +1968,28 @@ APPLICATION_TOOLS = {
             }
         ),
         "handler": bulk_deploy
+    },
+    
+    "coolify-set-fqdn": {
+        "definition": types.Tool(
+            name="coolify-set-fqdn",
+            description="Set the Primary FQDN for an application to enable external domain routing.",
+            inputSchema={
+                "type": "object",
+                "required": [],  # Made optional so we can provide helpful guidance
+                "properties": {
+                    "app_uuid": {
+                        "type": "string",
+                        "description": "The UUID of the application"
+                    },
+                    "fqdn": {
+                        "type": "string",
+                        "description": "Fully Qualified Domain Name (e.g., 'api.example.com', 'myapp.domain.com')"
+                    }
+                },
+                "additionalProperties": False
+            }
+        ),
+        "handler": set_fqdn
     }
 }
