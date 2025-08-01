@@ -28,8 +28,8 @@ COPY . .
 # Build TypeScript code
 RUN npm run build
 
-# Install Playwright browsers
-RUN npx playwright install chromium
+# Install Playwright browsers with dependencies
+RUN npx playwright install --with-deps chromium
 
 # Expose port
 EXPOSE 3010
