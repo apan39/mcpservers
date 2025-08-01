@@ -21,13 +21,15 @@ COPY . .
 # Build TypeScript code
 RUN npm run build
 
-# Install Playwright browsers and dependencies
-RUN npx playwright install --with-deps chromium
-
-# Create non-root user for security
+# Create non-root user for security first
 RUN useradd --create-home --shell /bin/bash appuser
 RUN chown -R appuser:appuser /app
+
+# Switch to appuser before installing Playwright
 USER appuser
+
+# Install Playwright browsers and dependencies as appuser
+RUN npx playwright install --with-deps chromium
 
 # Expose port
 EXPOSE 3010
