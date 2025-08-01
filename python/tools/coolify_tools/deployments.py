@@ -21,29 +21,74 @@ async def get_deployment_logs(deployment_uuid: str, lines: int = 50) -> list[typ
         status = deployment_data.get('status', 'N/A')
         started_at = deployment_data.get('started_at', 'N/A')
         finished_at = deployment_data.get('finished_at', 'N/A')
+        application_name = deployment_data.get('application_name', 'N/A')
         
-        result = f"""Deployment UUID: {deployment_uuid}
-Status: {status}
-Started At: {started_at}
-Finished At: {finished_at}
+        result = f"""📋 **Deployment Summary**
+UUID: {deployment_uuid}
+Application: {application_name}
+Status: **{status.upper()}**
+Started: {started_at}
+Finished: {finished_at}
 
-=== DEPLOYMENT LOGS ===
 """
         
-        # Process logs
+        # Check logs size before processing
         logs_data = deployment_data.get('logs', [])
+        
+        # Debug: Check actual log data type and size
+        logger.info(f"Logs data type: {type(logs_data)}, size: {len(str(logs_data))}")
+        
+        # Immediately truncate if response is too large
+        if len(str(logs_data)) > 50000:  # Extremely aggressive limit
+            result += f"⚠️ **Massive Log Response** ({len(str(logs_data)):,} chars)\n\n"
+            result += "**🔴 Response too large to process safely**\n"
+            result += "**Status:** Deployment completed but logs are extensive\n"
+            result += "**Recommendation:** Check Coolify UI for full deployment logs\n"
+            return [types.TextContent(type="text", text=result)]
+        
+        # If logs are a string, be extremely aggressive with truncation
         if isinstance(logs_data, str):
-            # If logs are stored as JSON string, parse them
+            if len(logs_data) > 1000:  # Very small threshold
+                result += f"⚠️ **Large Log File** ({len(logs_data):,} chars) - Summary Only\n\n"
+                
+                # Find the main error quickly
+                lines = logs_data.split('\n')
+                error_found = False
+                
+                for line in lines:
+                    if 'npm error' in line.lower() or 'eresolve' in line.lower():
+                        result += f"**🔴 Main Error:** {line[:200]}...\n"
+                        error_found = True
+                        break
+                
+                if not error_found:
+                    for line in lines:
+                        if any(keyword in line.lower() for keyword in ['error', 'failed', 'exit code']):
+                            result += f"**🔴 Error:** {line[:150]}...\n"
+                            break
+                
+                # Show last line only
+                last_line = [line for line in lines[-3:] if line.strip()][-1] if lines else ""
+                if last_line:
+                    result += f"**📄 Final:** {last_line[:100]}...\n"
+                        
+                result += f"\n💡 Use Coolify UI for full logs"
+                return [types.TextContent(type="text", text=result)]
+        
+        # Process normally sized logs
+        if isinstance(logs_data, str):
             import json
             try:
                 logs_data = json.loads(logs_data)
             except:
-                result += f"Raw logs: {logs_data}"
+                result += f"**Raw Logs:**\n{logs_data[:3000]}{'...' if len(logs_data) > 3000 else ''}"
                 return [types.TextContent(type="text", text=result)]
         
         if isinstance(logs_data, list):
+            result += f"**📋 Deployment Logs** (Last {min(lines, len(logs_data))} entries):\n\n"
+            
             # Get the last N lines
-            recent_logs = logs_data[-lines:] if lines > 0 else logs_data
+            recent_logs = logs_data[-lines:] if lines > 0 else logs_data[-20:]
             
             for log_entry in recent_logs:
                 if isinstance(log_entry, dict):
@@ -56,11 +101,13 @@ Finished At: {finished_at}
                         continue
                     
                     if output.strip():
-                        result += f"{log_type.upper()}: {output}\n"
+                        truncated_output = output[:400] + "..." if len(output) > 400 else output
+                        result += f"**{log_type.upper()}:** {truncated_output}\n\n"
                 else:
-                    result += f"LOG: {log_entry}\n"
+                    truncated_entry = str(log_entry)[:400] + "..." if len(str(log_entry)) > 400 else str(log_entry)
+                    result += f"**LOG:** {truncated_entry}\n\n"
         else:
-            result += f"Logs data: {logs_data}"
+            result += f"**Logs Data:** {str(logs_data)[:1000]}{'...' if len(str(logs_data)) > 1000 else ''}"
         
         return [types.TextContent(type="text", text=result)]
         
@@ -142,29 +189,36 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
         base_url = get_coolify_base_url()
         headers = get_coolify_headers()
         
-        response = requests.get(f"{base_url}/deployments/by-app-uuid?uuid={app_uuid}", headers=headers, timeout=30)
+        # Use the specific endpoint for application deployments
+        response = requests.get(f"{base_url}/deployments/list-by-app-uuid?uuid={app_uuid}", headers=headers, timeout=30)
         response.raise_for_status()
         
-        deployments = response.json()
+        app_deployments = response.json()
         logger.info(f"Successfully retrieved deployments for application {app_uuid}")
         
-        if not deployments or len(deployments) == 0:
+        # Ensure we have a list
+        if not isinstance(app_deployments, list):
+            app_deployments = [app_deployments] if app_deployments else []
+        
+        if not app_deployments:
             return [types.TextContent(type="text", text=f"No deployments found for application {app_uuid}")]
         
         # Sort by created date and limit results
-        if isinstance(deployments, list):
-            sorted_deployments = sorted(deployments, key=lambda x: x.get('created_at', ''), reverse=True)
-            recent_deployments = sorted_deployments[:limit]
-        else:
-            recent_deployments = [deployments]
+        sorted_deployments = sorted(app_deployments, key=lambda x: x.get('created_at', ''), reverse=True)
+        recent_deployments = sorted_deployments[:limit]
         
         result = f"📋 **Recent Deployments for Application {app_uuid}**\n\n"
         
         for i, deployment in enumerate(recent_deployments, 1):
-            uuid = deployment.get('uuid', 'N/A')
+            # Try different possible UUID field names
+            deployment_uuid = (deployment.get('deployment_uuid') or 
+                             deployment.get('uuid') or 
+                             deployment.get('id') or 
+                             'N/A')
+            
             status = deployment.get('status', 'N/A')
             created_at = deployment.get('created_at', 'N/A')
-            finished_at = deployment.get('finished_at', 'In progress...')
+            finished_at = deployment.get('finished_at', deployment.get('updated_at', 'In progress...'))
             
             # Add status emoji
             status_emoji = {
@@ -176,7 +230,10 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
                 'cancelled': '⏹️'
             }.get(status.lower(), 'ℹ️')
             
-            result += f"""{i}. {status_emoji} **Deployment {uuid[:8]}...**
+            uuid_display = deployment_uuid[:8] + "..." if len(str(deployment_uuid)) > 8 else str(deployment_uuid)
+            
+            result += f"""{i}. {status_emoji} **Deployment {uuid_display}**
+   UUID: {deployment_uuid}
    Status: {status}
    Started: {created_at}
    Finished: {finished_at}
@@ -187,7 +244,15 @@ async def get_recent_deployments(app_uuid: str, limit: int = 5) -> list[types.Te
 💡 **Commands:**
 • View logs: `coolify-get-deployment-logs --deployment_uuid DEPLOYMENT_UUID`
 • Watch deployment: `coolify-watch-deployment --deployment_uuid DEPLOYMENT_UUID`
-"""
+
+🔍 **Available Deployment UUIDs:**"""
+
+        for deployment in recent_deployments:
+            deployment_uuid = (deployment.get('deployment_uuid') or 
+                             deployment.get('uuid') or 
+                             deployment.get('id') or 
+                             'N/A')
+            result += f"\n• {deployment_uuid}"
         
         return [types.TextContent(type="text", text=result)]
         
@@ -363,6 +428,44 @@ async def get_application_logs(app_uuid: str, lines: int = 100) -> list[types.Te
         error_msg = format_enhanced_error(e, f"Unexpected error while getting application logs for {app_uuid}", "coolify-get-application-logs")
         return [types.TextContent(type="text", text=error_msg)]
 
+async def debug_deployments_api() -> list[types.TextContent]:
+    """Debug function to see raw deployment API response structure."""
+    try:
+        base_url = get_coolify_base_url()
+        headers = get_coolify_headers()
+        
+        response = requests.get(f"{base_url}/deployments", headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        deployments = response.json()
+        
+        # Show first few deployments with full structure
+        import json
+        result = f"🔧 **Coolify Deployments API Debug**\n\n"
+        result += f"**Total deployments found:** {len(deployments) if isinstance(deployments, list) else 1}\n\n"
+        
+        if isinstance(deployments, list) and len(deployments) > 0:
+            result += "**First deployment structure:**\n"
+            result += f"```json\n{json.dumps(deployments[0], indent=2)}\n```\n\n"
+            
+            if len(deployments) > 1:
+                result += "**Available deployment keys:**\n"
+                for i, deployment in enumerate(deployments[:3]):  # Show first 3
+                    result += f"Deployment {i+1}: {list(deployment.keys())}\n"
+        else:
+            result += f"**Response:**\n```json\n{json.dumps(deployments, indent=2)}\n```"
+        
+        return [types.TextContent(type="text", text=result)]
+        
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"Failed to debug deployments API: {e}")
+        error_msg = handle_requests_error(e, "Unable to access deployments API", "debug-deployments-api")
+        return [types.TextContent(type="text", text=error_msg)]
+    except Exception as e:
+        logger.error(f"Failed to debug deployments API: {e}")
+        error_msg = format_enhanced_error(e, "Unexpected error while debugging deployments API", "debug-deployments-api")
+        return [types.TextContent(type="text", text=error_msg)]
+
 # Tool registration dictionary
 DEPLOYMENT_TOOLS = {
     "coolify-get-deployment-logs": {
@@ -478,5 +581,17 @@ DEPLOYMENT_TOOLS = {
             }
         ),
         "handler": get_application_logs
+    },
+    
+    "coolify-debug-deployments-api": {
+        "definition": types.Tool(
+            name="coolify-debug-deployments-api",
+            description="Debug function to see raw deployment API response structure.",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        "handler": debug_deployments_api
     }
 }
