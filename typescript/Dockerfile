@@ -45,8 +45,15 @@ USER appuser
 # Set Playwright environment variables
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/appuser/.cache/ms-playwright
 
-# Install Playwright browsers
+# Install Playwright browsers as appuser
 RUN npx playwright install chromium
+
+# Also install as root (fallback)
+USER root
+RUN PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright npx playwright install chromium
+
+# Switch back to appuser
+USER appuser
 
 # Expose port
 EXPOSE 3010
@@ -54,6 +61,9 @@ EXPOSE 3010
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3010/health || exit 1
+
+# Ensure we're running as appuser
+USER appuser
 
 # Start the server
 CMD ["npm", "start"]
