@@ -36,9 +36,12 @@ Solutions:
           };
         }
         
+        // Set up Playwright environment and try to find the correct browser path
+        process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '/home/appuser/.cache/ms-playwright';
+        
         browser = await chromium.launch({ 
           headless: true,
-          timeout: timeout 
+          timeout: timeout
         });
         const context = await browser.newContext({
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',

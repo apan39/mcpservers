@@ -645,6 +645,9 @@ Solutions:
               return;
             }
             
+            // Set up Playwright environment
+            process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '/home/appuser/.cache/ms-playwright';
+            
             browser = await chromium.launch({ 
               headless: true,
               timeout: args.timeout || 10000
