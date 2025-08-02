@@ -15,6 +15,11 @@ import {
 import { registerPlaywrightTools } from "./playwrightTools.js";
 import { registerFlowiseTools } from "./flowiseTools.js";
 import { registerContext7Tools } from "./context7Tools.js";
+import { 
+  githubGetUser, githubListRepos, githubGetRepo, githubListIssues, 
+  githubCreateIssue, githubListPRs, githubGetContents, githubSearchRepos 
+} from "./githubRemoteTools.js";
+import { coolifyInvestigateApp, coolifyAnalyzeRepo } from "./coolifyGithubTools.js";
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -573,6 +578,197 @@ app.post("/mcp", async (req: Request, res: Response) => {
                 type: "object",
                 properties: {}
               }
+            },
+            {
+              name: "github-get-user",
+              description: "Get information about the authenticated GitHub user",
+              inputSchema: {
+                type: "object",
+                properties: {}
+              }
+            },
+            {
+              name: "github-list-repos",
+              description: "List repositories for a user (or authenticated user if no username provided)",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  username: {
+                    type: "string",
+                    description: "Username to list repositories for (optional)"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-get-repo",
+              description: "Get detailed information about a specific repository",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-list-issues",
+              description: "List issues for a repository",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  state: {
+                    type: "string",
+                    enum: ["open", "closed", "all"],
+                    description: "Issue state filter"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-create-issue",
+              description: "Create a new issue in a repository",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo", "title"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  title: {
+                    type: "string",
+                    description: "Issue title"
+                  },
+                  body: {
+                    type: "string",
+                    description: "Issue description/body"
+                  },
+                  labels: {
+                    type: "array",
+                    items: {
+                      type: "string"
+                    },
+                    description: "Issue labels"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-list-prs",
+              description: "List pull requests for a repository",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  state: {
+                    type: "string",
+                    enum: ["open", "closed", "all"],
+                    description: "PR state filter"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-get-contents",
+              description: "Get contents of a repository directory or file",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  path: {
+                    type: "string",
+                    description: "Path to directory or file (empty for root)"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-search-repos",
+              description: "Search for repositories on GitHub",
+              inputSchema: {
+                type: "object",
+                required: ["query"],
+                properties: {
+                  query: {
+                    type: "string",
+                    description: "Search query"
+                  },
+                  sort: {
+                    type: "string",
+                    enum: ["stars", "forks", "updated"],
+                    description: "Sort order"
+                  }
+                }
+              }
+            },
+            {
+              name: "coolify-investigate-app",
+              description: "Investigate a Coolify application's GitHub repository, analyzing structure and key files",
+              inputSchema: {
+                type: "object",
+                required: ["coolifyAppInfo"],
+                properties: {
+                  coolifyAppInfo: {
+                    type: "object",
+                    description: "Coolify application information object (from coolify-get-application-info)"
+                  }
+                }
+              }
+            },
+            {
+              name: "coolify-analyze-repo",
+              description: "Analyze a GitHub repository by URL, with optional specific path analysis",
+              inputSchema: {
+                type: "object",
+                required: ["repoUrl"],
+                properties: {
+                  repoUrl: {
+                    type: "string",
+                    description: "GitHub repository URL or owner/repo format"
+                  },
+                  specificPath: {
+                    type: "string",
+                    description: "Optional specific file or directory path to analyze"
+                  }
+                }
+              }
             }
           ]
         }
@@ -732,6 +928,227 @@ Solutions:
             ]
           }
         });
+        return;
+      }
+
+      // Handle GitHub tools
+      if (name === "github-get-user") {
+        try {
+          const result = await githubGetUser();
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-get-user: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-list-repos") {
+        try {
+          const result = await githubListRepos(args.username);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-list-repos: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-get-repo") {
+        try {
+          const result = await githubGetRepo(args.owner, args.repo);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-get-repo: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-list-issues") {
+        try {
+          const result = await githubListIssues(args.owner, args.repo, args.state);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-list-issues: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-create-issue") {
+        try {
+          const result = await githubCreateIssue(args.owner, args.repo, args.title, args.body, args.labels);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-create-issue: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-list-prs") {
+        try {
+          const result = await githubListPRs(args.owner, args.repo, args.state);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-list-prs: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-get-contents") {
+        try {
+          const result = await githubGetContents(args.owner, args.repo, args.path);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-get-contents: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-search-repos") {
+        try {
+          const result = await githubSearchRepos(args.query, args.sort);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-search-repos: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "coolify-investigate-app") {
+        try {
+          const result = await coolifyInvestigateApp(args.coolifyAppInfo);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling coolify-investigate-app: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "coolify-analyze-repo") {
+        try {
+          const result = await coolifyAnalyzeRepo(args.repoUrl, args.specificPath);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling coolify-analyze-repo: ${errorMessage}`
+            }
+          });
+        }
         return;
       }
 

@@ -26,7 +26,7 @@
     },
     "remote-typescript-tools": {
       "type": "http",
-      "url": "http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp",
+      "url": "http://zw0o84skskgc8kgooswgo8k4.135.181.149.150.sslip.io/mcp",
       "headers": {
         "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
         "Content-Type": "application/json"
