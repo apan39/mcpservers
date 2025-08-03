@@ -1,13 +1,21 @@
 # Project Context for Claude
 
-## Key Documentation Files
+## Shared Ecosystem Documentation
+📚 **[Complete Ecosystem Documentation](docs/README.md)** - Shared documentation for all apan39 Coolify applications
+
+- **[Shared Context](docs/SHARED_CONTEXT.md)** - Architecture overview and application relationships
+- **[API Endpoints](docs/API_ENDPOINTS.md)** - Complete API documentation for all services  
+- **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Coolify deployment procedures and troubleshooting
+- **[Configuration Patterns](docs/COOLIFY_CONFIG.md)** - Standard configuration templates
+
+## Project-Specific Documentation Files
 - README.md - Main project overview
 - MCP_SETUP.md - MCP server setup instructions  
 - DEPLOYMENT.md - Deployment guidelines
 - COOLIFY_API_DEBUGGING.md - API debugging guide
 
 ## Project Structure
-This is an MCP (Model Context Protocol) servers project with deployment automation.
+This is an MCP (Model Context Protocol) servers project with deployment automation, part of the apan39 Coolify ecosystem.
 
 ## Coolify Deployment Protocol
 
@@ -88,3 +96,25 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 - **Always check logs** when deployments fail
 - **Use systematic debugging** approach from COOLIFY_API_DEBUGGING.md
 - **Update status** in this document after major changes
+
+### 7. Code Development Protocol
+**MANDATORY: Follow this sequence when implementing new features**
+
+1. **Code Implementation**
+   - Implement new features locally
+   - Test TypeScript compilation with `npm run build`
+   - Verify syntax and imports are correct
+
+2. **Git Operations (CRITICAL)**
+   - **ALWAYS commit code changes to git first**
+   - **ALWAYS push commits to remote repository**
+   - **NEVER attempt to test deployed features without committed code**
+   - Coolify deploys from the git repository, not local files
+
+3. **Deployment & Testing**
+   - Deploy application via Coolify API
+   - Wait for deployment to complete successfully
+   - Then test new MCP tools on remote server
+   - Verify tools are available and functioning
+
+**⚠️ IMPORTANT:** Remote MCP servers pull code from git repository. Local changes that aren't committed and pushed will NOT be deployed.

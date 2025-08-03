@@ -243,11 +243,25 @@ Both servers are successfully deployed and operational on Coolify:
 - `coolify-project-status` - Get comprehensive project status
 - `coolify-get-application-logs` - Get application runtime logs
 
-### TypeScript Server (Port 3010) - 10 Tools Total
+### TypeScript Server (Port 3010) - 22 Tools Total
 **Basic Tools (3 tools):**
 - `greet` - Simple greeting tool
 - `multi-greet` - Friendly greeting with delays
 - `scrape-dynamic-url` - Playwright-powered dynamic web scraping
+
+**🐙 GitHub Integration (8 tools):**
+- `github-get-user` - Get authenticated GitHub user information
+- `github-list-repos` - List repositories for a user or authenticated user
+- `github-get-repo` - Get detailed repository information
+- `github-list-issues` - List issues in a repository
+- `github-create-issue` - Create new issues in repositories
+- `github-list-prs` - List pull requests in a repository
+- `github-get-contents` - Get repository file and directory contents
+- `github-search-repos` - Search for repositories on GitHub
+
+**🚀 Coolify-GitHub Integration (2 tools):**
+- `coolify-investigate-app` - Analyze a Coolify application's GitHub repository structure and key files
+- `coolify-analyze-repo` - Deep analysis of GitHub repositories by URL with optional path-specific investigation
 
 **🤖 Flowise AI Integration (7 tools):**
 - `flowise-test-connection` - Test connectivity to Flowise instance
@@ -257,6 +271,10 @@ Both servers are successfully deployed and operational on Coolify:
 - `flowise-create-chatflow` - Create new AI agent workflows
 - `flowise-update-chatflow` - Update existing chatflows
 - `flowise-delete-chatflow` - Delete chatflows
+
+**📚 Context7 Documentation (2 tools):**
+- `context7-get-docs` - Get up-to-date library documentation and examples
+- `context7-server-status` - Check Context7 server connection status
 
 ### Browser-Use MCP Server - 30 Tools Total
 **Session Management (4 tools):**
@@ -311,7 +329,7 @@ Both servers are successfully deployed and operational on Coolify:
 - `get-tool-info` - Get detailed information about a specific tool with examples
 - `get-learning-path` - Get recommended learning paths (beginner, deployment, monitoring, etc.)
 
-**Total Available Tools: 77 tools across all servers**
+**Total Available Tools: 89 tools across all servers**
 
 ## 🤖 AI Assistant Commands
 
@@ -330,6 +348,21 @@ Please use the add-numbers tool to calculate 25 + 37
 Please use the string-operations tool to convert "Hello World" to uppercase
 Please use the crawl-url tool to extract text from https://news.ycombinator.com
 Please use the scrape-dynamic-url tool to get content from https://example.com
+```
+
+### GitHub Integration:
+```
+Please use github-list-repos to show my repositories
+Please use github-get-repo to get details for owner/repo-name
+Please use github-get-contents to show the contents of owner/repo-name
+Please use github-search-repos to find repositories about "machine learning"
+```
+
+### Coolify-GitHub Investigation:
+```
+Please get my Python MCP application info and investigate its GitHub repository
+Please analyze the repository https://github.com/owner/repo for deployment readiness
+Please investigate the src/components directory of my application's repository
 ```
 
 ## 🏗️ Architecture - Modular Coolify Tools
