@@ -420,3 +420,203 @@ export async function githubSearchRepos(query: string, sort: 'stars' | 'forks' |
     };
   }
 }
+
+// Create or update a file in a repository
+export async function githubCreateOrUpdateFile(
+  owner: string, 
+  repo: string, 
+  path: string, 
+  content: string, 
+  message: string,
+  branch: string = 'main',
+  sha?: string
+): Promise<any> {
+  if (!octokit) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "GitHub client not initialized. Please authenticate first.",
+        },
+      ],
+    };
+  }
+
+  try {
+    // Encode content to base64
+    const encodedContent = Buffer.from(content, 'utf-8').toString('base64');
+
+    // Create or update the file
+    const { data } = await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path,
+      message,
+      content: encodedContent,
+      branch,
+      sha, // Include SHA if updating existing file
+    });
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `File ${path} ${sha ? 'updated' : 'created'} successfully!\nCommit SHA: ${data.commit.sha}\nCommit URL: ${data.commit.html_url}`,
+        },
+      ],
+    };
+  } catch (error: any) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error ${sha ? 'updating' : 'creating'} file: ${error.message}`,
+        },
+      ],
+    };
+  }
+}
+
+// Get file SHA (needed for updates/deletes)
+export async function githubGetFileSha(owner: string, repo: string, path: string, branch: string = 'main'): Promise<any> {
+  if (!octokit) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "GitHub client not initialized. Please authenticate first.",
+        },
+      ],
+    };
+  }
+
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref: branch,
+    });
+
+    if (Array.isArray(data)) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Path ${path} is a directory, not a file`,
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `File SHA for ${path}: ${data.sha}`,
+        },
+      ],
+    };
+  } catch (error: any) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error getting file SHA: ${error.message}`,
+        },
+      ],
+    };
+  }
+}
+
+// Add git submodule (creates .gitmodules and commits)
+export async function githubAddSubmodule(
+  owner: string,
+  repo: string,
+  submodulePath: string,
+  submoduleUrl: string,
+  branch: string = 'main',
+  commitMessage?: string
+): Promise<any> {
+  if (!octokit) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "GitHub client not initialized. Please authenticate first.",
+        },
+      ],
+    };
+  }
+
+  try {
+    // Check if .gitmodules already exists
+    let gitmodulesContent = '';
+    let gitmodulesSha: string | undefined;
+    
+    try {
+      const { data: existingFile } = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path: '.gitmodules',
+        ref: branch,
+      });
+      
+      if (!Array.isArray(existingFile) && existingFile.type === 'file' && existingFile.content) {
+        gitmodulesContent = Buffer.from(existingFile.content, 'base64').toString('utf-8');
+        gitmodulesSha = existingFile.sha;
+      }
+    } catch (error) {
+      // .gitmodules doesn't exist, will create new
+    }
+
+    // Create submodule entry
+    const submoduleEntry = `\n[submodule "${submodulePath}"]\n\tpath = ${submodulePath}\n\turl = ${submoduleUrl}\n`;
+    
+    // Check if submodule already exists
+    if (gitmodulesContent.includes(`[submodule "${submodulePath}"]`)) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Submodule '${submodulePath}' already exists in .gitmodules`,
+          },
+        ],
+      };
+    }
+
+    // Add submodule to .gitmodules content
+    const newGitmodulesContent = gitmodulesContent + submoduleEntry;
+
+    // Create or update .gitmodules
+    const message = commitMessage || `Add ${submodulePath} as git submodule`;
+    
+    const result = await githubCreateOrUpdateFile(
+      owner,
+      repo,
+      '.gitmodules',
+      newGitmodulesContent.trim(),
+      message,
+      branch,
+      gitmodulesSha
+    );
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Git submodule '${submodulePath}' added successfully!\nSubmodule URL: ${submoduleUrl}\n${result.content[0].text}`,
+        },
+      ],
+    };
+  } catch (error: any) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error adding git submodule: ${error.message}`,
+        },
+      ],
+    };
+  }
+}

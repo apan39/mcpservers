@@ -17,7 +17,8 @@ import { registerFlowiseTools } from "./flowiseTools.js";
 import { registerContext7Tools } from "./context7Tools.js";
 import { 
   githubGetUser, githubListRepos, githubGetRepo, githubListIssues, 
-  githubCreateIssue, githubListPRs, githubGetContents, githubSearchRepos 
+  githubCreateIssue, githubListPRs, githubGetContents, githubSearchRepos,
+  githubCreateOrUpdateFile, githubGetFileSha, githubAddSubmodule
 } from "./githubRemoteTools.js";
 import { coolifyInvestigateApp, coolifyAnalyzeRepo } from "./coolifyGithubTools.js";
 import * as path from "path";
@@ -769,6 +770,107 @@ app.post("/mcp", async (req: Request, res: Response) => {
                   }
                 }
               }
+            },
+            {
+              name: "github-create-or-update-file",
+              description: "Create or update a file in a GitHub repository",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo", "path", "content", "message"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  path: {
+                    type: "string",
+                    description: "File path in the repository"
+                  },
+                  content: {
+                    type: "string",
+                    description: "File content"
+                  },
+                  message: {
+                    type: "string",
+                    description: "Commit message"
+                  },
+                  branch: {
+                    type: "string",
+                    default: "main",
+                    description: "Branch name (default: main)"
+                  },
+                  sha: {
+                    type: "string",
+                    description: "File SHA (required for updates, get with github-get-file-sha)"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-get-file-sha",
+              description: "Get the SHA of a file (needed for updates/deletes)",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo", "path"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  path: {
+                    type: "string",
+                    description: "File path in the repository"
+                  },
+                  branch: {
+                    type: "string",
+                    default: "main",
+                    description: "Branch name (default: main)"
+                  }
+                }
+              }
+            },
+            {
+              name: "github-add-submodule",
+              description: "Add a git submodule to a repository (creates/updates .gitmodules)",
+              inputSchema: {
+                type: "object",
+                required: ["owner", "repo", "submodulePath", "submoduleUrl"],
+                properties: {
+                  owner: {
+                    type: "string",
+                    description: "Repository owner/organization"
+                  },
+                  repo: {
+                    type: "string",
+                    description: "Repository name"
+                  },
+                  submodulePath: {
+                    type: "string",
+                    description: "Path where submodule should be added (e.g., 'docs')"
+                  },
+                  submoduleUrl: {
+                    type: "string",
+                    description: "URL of the submodule repository"
+                  },
+                  branch: {
+                    type: "string",
+                    default: "main",
+                    description: "Branch name (default: main)"
+                  },
+                  commitMessage: {
+                    type: "string",
+                    description: "Custom commit message (optional)"
+                  }
+                }
+              }
             }
           ]
         }
@@ -1146,6 +1248,87 @@ Solutions:
             error: {
               code: -32603,
               message: `Error calling coolify-analyze-repo: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-create-or-update-file") {
+        try {
+          const result = await githubCreateOrUpdateFile(
+            args.owner, 
+            args.repo, 
+            args.path, 
+            args.content, 
+            args.message, 
+            args.branch, 
+            args.sha
+          );
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-create-or-update-file: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-get-file-sha") {
+        try {
+          const result = await githubGetFileSha(args.owner, args.repo, args.path, args.branch);
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-get-file-sha: ${errorMessage}`
+            }
+          });
+        }
+        return;
+      }
+
+      if (name === "github-add-submodule") {
+        try {
+          const result = await githubAddSubmodule(
+            args.owner,
+            args.repo,
+            args.submodulePath,
+            args.submoduleUrl,
+            args.branch,
+            args.commitMessage
+          );
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            result
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          res.json({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: `Error calling github-add-submodule: ${errorMessage}`
             }
           });
         }
