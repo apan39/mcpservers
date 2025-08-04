@@ -14,6 +14,7 @@ interface PayloadConfig {
   apiKey?: string;
   token?: string;
   timeout?: number;
+  localhost?: boolean; // Auto-detected for localhost URLs
 }
 
 // Authentication state management
@@ -40,13 +41,35 @@ class PayloadAuthManager {
   }
 }
 
+// Detect localhost and optimize configuration
+function enhanceConfig(config: PayloadConfig): PayloadConfig {
+  const enhanced = { ...config };
+  
+  // Auto-detect localhost
+  const url = new URL(enhanced.baseUrl);
+  enhanced.localhost = url.hostname === 'localhost' || 
+                      url.hostname === '127.0.0.1' || 
+                      url.hostname.endsWith('.local');
+  
+  // Optimize for localhost (faster timeout, no auth complexity)
+  if (enhanced.localhost) {
+    enhanced.timeout = enhanced.timeout || 10000; // Faster timeout for localhost
+    console.log(`🔗 PayloadCMS localhost detected: ${enhanced.baseUrl}`);
+  } else {
+    enhanced.timeout = enhanced.timeout || 30000; // Standard timeout for remote
+  }
+  
+  return enhanced;
+}
+
 // Utility function to make PayloadCMS API calls
 async function makePayloadRequest(
   config: PayloadConfig,
   endpoint: string,
   options: RequestInit = {}
 ): Promise<any> {
-  const url = `${config.baseUrl}/api${endpoint}`;
+  const enhancedConfig = enhanceConfig(config);
+  const url = `${enhancedConfig.baseUrl}/api${endpoint}`;
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -55,14 +78,14 @@ async function makePayloadRequest(
   };
 
   // Add authentication
-  if (config.token) {
-    headers['Authorization'] = `JWT ${config.token}`;
-  } else if (config.apiKey) {
-    headers['Authorization'] = `users API-Key ${config.apiKey}`;
+  if (enhancedConfig.token) {
+    headers['Authorization'] = `JWT ${enhancedConfig.token}`;
+  } else if (enhancedConfig.apiKey) {
+    headers['Authorization'] = `users API-Key ${enhancedConfig.apiKey}`;
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000);
+  const timeoutId = setTimeout(() => controller.abort(), enhancedConfig.timeout);
   
   try {
     const response = await fetch(url, {
@@ -89,12 +112,34 @@ async function makePayloadRequest(
   }
 }
 
+// Localhost presets for common PayloadCMS development setups
+const LOCALHOST_PRESETS = {
+  'localhost': 'http://localhost:3000',
+  'localhost:3000': 'http://localhost:3000', 
+  'localhost:3001': 'http://localhost:3001',
+  'localhost:4000': 'http://localhost:4000',
+  'localhost:5000': 'http://localhost:5000'
+};
+
+// Helper function to resolve localhost URLs
+function resolveBaseUrl(baseUrl: string): string {
+  // If it's a preset key, resolve it
+  if (LOCALHOST_PRESETS[baseUrl as keyof typeof LOCALHOST_PRESETS]) {
+    return LOCALHOST_PRESETS[baseUrl as keyof typeof LOCALHOST_PRESETS];
+  }
+  // If it starts with localhost but no protocol, add http://
+  if (baseUrl.startsWith('localhost')) {
+    return `http://${baseUrl}`;
+  }
+  return baseUrl;
+}
+
 // Configuration schema
 const payloadConfigSchema = z.object({
-  baseUrl: z.string().url().describe("PayloadCMS instance URL (e.g., 'https://cms.example.com')"),
+  baseUrl: z.string().describe("PayloadCMS instance URL (e.g., 'https://cms.example.com', 'localhost:3000', or 'localhost')").transform(resolveBaseUrl),
   apiKey: z.string().optional().describe("PayloadCMS API key (optional if using token)"),
   token: z.string().optional().describe("JWT token (optional if using API key)"),
-  timeout: z.number().optional().default(30000).describe("Request timeout in milliseconds")
+  timeout: z.number().optional().describe("Request timeout in milliseconds (auto-optimized for localhost)")
 });
 
 // Collection operations schemas

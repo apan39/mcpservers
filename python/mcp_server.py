@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple HTTP MCP Server implementation.
+Python MCP Server with HTTP and SSE transport support.
+Supports both local development (SSE) and remote deployment (HTTP).
 """
 
 import asyncio
@@ -12,6 +13,7 @@ from typing import Any, Dict, List
 
 import uvicorn
 from mcp.server.lowlevel import Server
+from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
@@ -197,16 +199,99 @@ async def health_check(request: Request) -> JSONResponse:
         "service": "simple-mcp-http-server"
     })
 
+def create_mcp_server() -> Server:
+    """Create the MCP server with tools."""
+    setup_tools()
+    
+    server = Server("python-mcp-server")
+    
+    # Register tools with the MCP server
+    @server.call_tool()
+    async def call_tool(name: str, arguments: dict) -> List[TextContent]:
+        if name not in tool_registry:
+            raise ValueError(f"Unknown tool: {name}")
+        
+        handler = tool_registry[name]["handler"]
+        try:
+            result = await handler(**arguments)
+            # Convert result to proper format
+            if isinstance(result, list):
+                # Handle list of TextContent objects
+                json_result = []
+                for item in result:
+                    if hasattr(item, 'type') and hasattr(item, 'text'):
+                        json_result.append(TextContent(type=item.type, text=item.text))
+                    else:
+                        json_result.append(TextContent(type="text", text=str(item)))
+                return json_result
+            elif isinstance(result, TextContent):
+                return [result]
+            else:
+                return [TextContent(type="text", text=str(result))]
+        except Exception as e:
+            logger.error(f"Error executing tool {name}: {str(e)}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+    
+    @server.list_tools()
+    async def list_tools() -> List[Tool]:
+        tools = []
+        for tool_name, tool_info in tool_registry.items():
+            tools.append(tool_info["definition"])
+        return tools
+    
+    return server
+
+# Global SSE transport and server instances
+sse_transport = None
+mcp_server = None
+
+async def handle_sse(request):
+    """Handle SSE connections for local development."""
+    global sse_transport, mcp_server
+    
+    if not sse_transport:
+        sse_transport = SseServerTransport("/messages")
+        mcp_server = create_mcp_server()
+    
+    logger.info(f"New SSE connection from {request.client.host}")
+    try:
+        async with sse_transport.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await mcp_server.run(
+                streams[0], streams[1], mcp_server.create_initialization_options()
+            )
+    except Exception as e:
+        logger.error(f"SSE error: {e}")
+        raise
+
+async def handle_sse_messages(request):
+    """Handle SSE POST messages."""
+    global sse_transport
+    
+    if not sse_transport:
+        return JSONResponse({"error": "SSE transport not initialized"}, status_code=400)
+    
+    try:
+        return await sse_transport.handle_post_message(request)
+    except Exception as e:
+        logger.error(f"SSE message error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 def create_app() -> Starlette:
-    """Create the Starlette application."""
+    """Create the Starlette application with both HTTP and SSE support."""
     setup_tools()
     
     app = Starlette(
         debug=False,
         routes=[
+            # HTTP endpoints (for remote deployment)
             Route("/mcp", handle_mcp_request, methods=["POST"]),
             Route("/mcp/", handle_mcp_request, methods=["POST"]),
             Route("/health", health_check, methods=["GET"]),
+            # SSE endpoints (for local development)
+            Route("/sse", handle_sse),
+            Route("/messages", handle_sse_messages, methods=["POST"]),
         ],
     )
     
@@ -228,7 +313,11 @@ def main():
     port = int(os.getenv("PORT", "3009"))
     log_level = os.getenv("LOG_LEVEL", "INFO").lower()
     
-    logger.info(f"Starting simple HTTP MCP server on {host}:{port}")
+    logger.info(f"Starting Python MCP server on {host}:{port}")
+    logger.info("Available endpoints:")
+    logger.info(f"  HTTP (remote): http://{host}:{port}/mcp")
+    logger.info(f"  SSE (local): http://{host}:{port}/sse")
+    logger.info(f"  Health: http://{host}:{port}/health")
     
     app = create_app()
     uvicorn.run(app, host=host, port=port, log_level=log_level, access_log=True)

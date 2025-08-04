@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "python-local-sse": {
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:3009/sse"
+      }
+    },
+    "typescript-local-sse": {
+      "transport": {
+        "type": "sse", 
+        "url": "http://localhost:3010/sse"
+      }
+    },
+    "browser-use-local-sse": {
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:3000/sse"
+      }
+    }
+  }
+}

@@ -42,12 +42,43 @@ Remote URL: http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp
 Auth: Bearer ${MCP_API_KEY}
 ```
 
-## ⚡ Local + Remote Architecture
+## ⚡ Local SSE + Remote HTTP Hybrid Architecture
 
-**Standard Pattern**: Every MCP server should have both local and remote versions for maximum flexibility:
+**🆕 NEW APPROACH**: All MCP servers now support both local SSE and remote HTTP for maximum flexibility:
 
-- **Local servers** (`stdio`): Fast, direct access for development and testing
-- **Remote servers** (`http`): Production-ready, scalable, with authentication
+- **Local SSE servers**: Fast, direct localhost access for development (no auth required)
+- **Remote HTTP servers**: Production-ready, scalable, with authentication on Coolify
+
+### 🚀 Quick Start - Local SSE Development
+
+For **localhost PayloadCMS access** and development, use our new SSE endpoints:
+
+```bash
+# Start all local SSE servers
+./start-local-sse.sh
+
+# Configure Claude Desktop for local development
+cp local-mcp-config.json ~/.claude-desktop/mcp.json
+
+# Restart Claude Desktop - you now have direct localhost access!
+```
+
+**Local SSE Configuration:**
+```json
+{
+  "mcpServers": {
+    "python-local-sse": {
+      "transport": {"type": "sse", "url": "http://localhost:3009/sse"}
+    },
+    "typescript-local-sse": {
+      "transport": {"type": "sse", "url": "http://localhost:3010/sse"}
+    },
+    "browser-use-local-sse": {
+      "transport": {"type": "sse", "url": "http://localhost:3000/sse"}
+    }
+  }
+}
+```
 
 **Current Remote Configuration in `.mcp.json`:**
 ```json
@@ -202,15 +233,23 @@ claude mcp add --transport http typescript-tools https://your-typescript-app.coo
 - `multi-greet` - Friendly greeting: `{"name": "Claude"}`
 - `scrape-dynamic-url` - Dynamic scraping: `{"url": "https://example.com", "timeout": 10000}`
 
-**🎯 PayloadCMS 3.x Integration (12 tools):**
+**🎯 PayloadCMS 3.x Integration (12 tools) - Now with Localhost Support!**
+
+*🔗 Localhost Configuration (Auto-optimized):*
+- **Simple localhost**: `{"config": {"baseUrl": "localhost"}}` → Auto-resolves to `http://localhost:3000`
+- **Custom port**: `{"config": {"baseUrl": "localhost:3001"}}` → Auto-resolves to `http://localhost:3001`
+- **Multiple instances**: Supports `localhost:3000`, `localhost:3001`, `localhost:4000`, `localhost:5000`
+- **Auto-optimization**: Faster timeouts and simplified auth for localhost URLs
 
 *Collection CRUD Operations (6 tools):*
-- `payload-find-documents` - Query collection documents: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "where": {"status": {"equals": "published"}}, "limit": 10}`
-- `payload-get-document` - Get document by ID: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde"}`
-- `payload-create-document` - Create new document: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "data": {"title": "New Post", "content": "Content here"}}`
-- `payload-update-document` - Update existing document: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde", "data": {"title": "Updated Title"}}`
-- `payload-delete-document` - Delete document: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde"}`
-- `payload-count-documents` - Count documents: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "where": {"status": {"equals": "published"}}}`
+- `payload-find-documents` - Query collection documents:
+  - **🏠 Localhost**: `{"config": {"baseUrl": "localhost:3000"}, "collection": "posts", "where": {"status": {"equals": "published"}}, "limit": 10}`
+  - **🌐 Remote**: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "where": {"status": {"equals": "published"}}, "limit": 10}`
+- `payload-get-document` - Get document by ID: `{"config": {"baseUrl": "localhost"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde"}`
+- `payload-create-document` - Create new document: `{"config": {"baseUrl": "localhost:3001"}, "collection": "posts", "data": {"title": "New Post", "content": "Content here"}}`
+- `payload-update-document` - Update existing document: `{"config": {"baseUrl": "localhost"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde", "data": {"title": "Updated Title"}}`
+- `payload-delete-document` - Delete document: `{"config": {"baseUrl": "localhost"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde"}`
+- `payload-count-documents` - Count documents: `{"config": {"baseUrl": "localhost"}, "collection": "posts", "where": {"status": {"equals": "published"}}}`
 
 *Authentication (3 tools):*
 - `payload-login` - Authenticate and get JWT: `{"config": {"baseUrl": "https://cms.example.com"}, "email": "admin@example.com", "password": "password"}`
@@ -399,9 +438,18 @@ Please scrape this JavaScript-heavy page with custom timeout
 Please extract content from this dynamically loaded page
 ```
 
-**🎯 PayloadCMS Backend Management:**
+**🎯 PayloadCMS Backend Management (Now with Localhost Support!):**
 
-*Authentication & Setup:*
+*🏠 Localhost Development:*
+```
+Please check connectivity to my local PayloadCMS at localhost
+Please create a new blog post in my localhost PayloadCMS 'posts' collection
+Please find all published posts from localhost:3001
+Please upload an image to my local PayloadCMS media collection
+Please update the header global in my localhost PayloadCMS
+```
+
+*🌐 Remote Production:*
 ```
 Please use payload-login to authenticate with my PayloadCMS instance at https://cms.example.com
 Please check the connectivity to my PayloadCMS API using payload-health-check
