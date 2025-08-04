@@ -15,6 +15,7 @@ import {
 import { registerPlaywrightTools } from "./playwrightTools.js";
 import { registerFlowiseTools } from "./flowiseTools.js";
 import { registerContext7Tools } from "./context7Tools.js";
+import { registerPayloadCMSTools } from "./payloadcmsTools.js";
 import { 
   githubGetUser, githubListRepos, githubGetRepo, githubListIssues, 
   githubCreateIssue, githubListPRs, githubGetContents, githubSearchRepos,
@@ -259,6 +260,9 @@ function createMCPServer(): McpServer {
   
   // Register Context7 tools
   registerContext7Tools(server);
+  
+  // Register PayloadCMS tools
+  registerPayloadCMSTools(server);
   
   return server;
 }
@@ -871,6 +875,177 @@ app.post("/mcp", async (req: Request, res: Response) => {
                   }
                 }
               }
+            },
+            // PayloadCMS Tools
+            {
+              name: "payload-find-documents",
+              description: "Query and find documents in a PayloadCMS collection with filtering, pagination, and sorting",
+              inputSchema: {
+                type: "object",
+                required: ["config", "collection"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string" },
+                  where: { type: "object" },
+                  limit: { type: "number" },
+                  page: { type: "number" },
+                  sort: { type: "string" },
+                  depth: { type: "number" },
+                  locale: { type: "string" }
+                }
+              }
+            },
+            {
+              name: "payload-get-document",
+              description: "Get a specific document by ID from a PayloadCMS collection",
+              inputSchema: {
+                type: "object",
+                required: ["config", "collection", "id"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string" },
+                  id: { type: "string" },
+                  depth: { type: "number" },
+                  locale: { type: "string" }
+                }
+              }
+            },
+            {
+              name: "payload-create-document",
+              description: "Create a new document in a PayloadCMS collection",
+              inputSchema: {
+                type: "object",
+                required: ["config", "collection", "data"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string" },
+                  data: { type: "object" },
+                  locale: { type: "string" },
+                  draft: { type: "boolean" }
+                }
+              }
+            },
+            {
+              name: "payload-update-document",
+              description: "Update an existing document in a PayloadCMS collection",
+              inputSchema: {
+                type: "object",
+                required: ["config", "collection", "id", "data"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string" },
+                  id: { type: "string" },
+                  data: { type: "object" },
+                  locale: { type: "string" },
+                  draft: { type: "boolean" }
+                }
+              }
+            },
+            {
+              name: "payload-delete-document",
+              description: "Delete a document from a PayloadCMS collection",
+              inputSchema: {
+                type: "object",
+                required: ["config", "collection", "id"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string" },
+                  id: { type: "string" }
+                }
+              }
+            },
+            {
+              name: "payload-login",
+              description: "Authenticate with PayloadCMS and obtain JWT token",
+              inputSchema: {
+                type: "object",
+                required: ["config", "email", "password"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string", default: "users" },
+                  email: { type: "string", format: "email" },
+                  password: { type: "string" }
+                }
+              }
+            },
+            {
+              name: "payload-get-current-user",
+              description: "Get information about the currently authenticated user",
+              inputSchema: {
+                type: "object",
+                required: ["config"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string", default: "users" }
+                }
+              }
+            },
+            {
+              name: "payload-get-global",
+              description: "Get a PayloadCMS global configuration",
+              inputSchema: {
+                type: "object",
+                required: ["config", "slug"],
+                properties: {
+                  config: { type: "object" },
+                  slug: { type: "string" },
+                  locale: { type: "string" }
+                }
+              }
+            },
+            {
+              name: "payload-update-global",
+              description: "Update a PayloadCMS global configuration",
+              inputSchema: {
+                type: "object",
+                required: ["config", "slug", "data"],
+                properties: {
+                  config: { type: "object" },
+                  slug: { type: "string" },
+                  data: { type: "object" },
+                  locale: { type: "string" }
+                }
+              }
+            },
+            {
+              name: "payload-upload-file",
+              description: "Upload a file to a PayloadCMS upload collection",
+              inputSchema: {
+                type: "object",
+                required: ["config", "collection", "fileData", "fileName"],
+                properties: {
+                  config: { type: "object" },
+                  collection: { type: "string" },
+                  fileData: { type: "string" },
+                  fileName: { type: "string" },
+                  mimeType: { type: "string" },
+                  data: { type: "object" }
+                }
+              }
+            },
+            {
+              name: "payload-graphql-query",
+              description: "Execute a GraphQL query against PayloadCMS",
+              inputSchema: {
+                type: "object",
+                required: ["config", "query"],
+                properties: {
+                  config: { type: "object" },
+                  query: { type: "string" },
+                  variables: { type: "object" }
+                }
+              }
+            },
+            {
+              name: "payload-health-check",
+              description: "Check PayloadCMS API connectivity and get version information",
+              inputSchema: {
+                type: "object",
+                required: ["config"],
+                properties: {
+                  config: { type: "object" }
+                }
+              }
             }
           ]
         }
@@ -1332,6 +1507,24 @@ Solutions:
             }
           });
         }
+        return;
+      }
+
+      // Handle PayloadCMS tools
+      if (name.startsWith("payload-")) {
+        // For the simple endpoint, just pass through to advanced endpoint
+        res.json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `PayloadCMS tool "${name}" requires the advanced MCP endpoint. Use /mcp-advanced instead.`
+              }
+            ]
+          }
+        });
         return;
       }
 

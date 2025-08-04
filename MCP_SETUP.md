@@ -124,7 +124,7 @@ claude mcp add --transport http python-tools https://your-python-app.coolify-dom
 claude mcp add --transport http typescript-tools https://your-typescript-app.coolify-domain.com/mcp
 ```
 
-## 🛠 Available Tools (Total: 70 tools)
+## 🛠 Available Tools (Total: 82+ tools)
 
 ### Python Server (python-tools) - 37 Tools
 
@@ -195,10 +195,57 @@ claude mcp add --transport http typescript-tools https://your-typescript-app.coo
 - `get-tool-info` - Get tool details: `{"tool_name": "coolify-deploy-application"}`
 - `get-learning-path` - Get learning path: `{"focus": "beginner"}`
 
-### TypeScript Server (typescript-tools) - 3 Tools
+### TypeScript Server (typescript-tools) - 33+ Tools
+
+**Basic Tools (3 tools):**
 - `greet` - Simple greeting: `{"name": "Claude"}`
 - `multi-greet` - Friendly greeting: `{"name": "Claude"}`
 - `scrape-dynamic-url` - Dynamic scraping: `{"url": "https://example.com", "timeout": 10000}`
+
+**🎯 PayloadCMS 3.x Integration (12 tools):**
+
+*Collection CRUD Operations (6 tools):*
+- `payload-find-documents` - Query collection documents: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "where": {"status": {"equals": "published"}}, "limit": 10}`
+- `payload-get-document` - Get document by ID: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde"}`
+- `payload-create-document` - Create new document: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "data": {"title": "New Post", "content": "Content here"}}`
+- `payload-update-document` - Update existing document: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde", "data": {"title": "Updated Title"}}`
+- `payload-delete-document` - Delete document: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "id": "64a7b8c9d1234567890abcde"}`
+- `payload-count-documents` - Count documents: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "posts", "where": {"status": {"equals": "published"}}}`
+
+*Authentication (3 tools):*
+- `payload-login` - Authenticate and get JWT: `{"config": {"baseUrl": "https://cms.example.com"}, "email": "admin@example.com", "password": "password"}`
+- `payload-get-current-user` - Get current user info: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}}`
+- `payload-logout` - Logout and clear token: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}}`
+
+*Global Configuration (2 tools):*
+- `payload-get-global` - Get global config: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "slug": "header"}`
+- `payload-update-global` - Update global config: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "slug": "header", "data": {"logo": "new-logo.png"}}`
+
+*File Management (1 tool):*
+- `payload-upload-file` - Upload files: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "collection": "media", "fileData": "data:image/png;base64,iVBORw0K...", "fileName": "image.png"}`
+
+*Advanced Operations (2 tools):*
+- `payload-graphql-query` - Execute GraphQL queries: `{"config": {"baseUrl": "https://cms.example.com", "token": "jwt"}, "query": "query { Posts { docs { id title } } }"}`
+- `payload-health-check` - Check API connectivity: `{"config": {"baseUrl": "https://cms.example.com", "apiKey": "your-api-key"}}`
+
+**GitHub Integration (18+ tools):**
+- `github-get-user` - Get authenticated user: `{}`
+- `github-list-repos` - List repositories: `{"username": "optional"}`
+- `github-get-repo` - Get repository details: `{"owner": "user", "repo": "repository"}`
+- `github-create-issue` - Create issue: `{"owner": "user", "repo": "repository", "title": "Issue Title", "body": "Description"}`
+- `github-create-or-update-file` - Create/update files: `{"owner": "user", "repo": "repo", "path": "file.txt", "content": "content", "message": "commit message"}`
+- And 13+ more GitHub management tools...
+
+**Context7 Integration (6+ tools):**
+- `context7-get-docs` - Get library documentation: `{"library": "react", "version": "18"}`
+- `context7-search-examples` - Search code examples: `{"library": "next.js", "pattern": "API routes"}`
+- `context7-ai-context` - Get AI coding context: `{"libraries": ["react", "typescript"], "task": "Build a dashboard"}`
+- And 3+ more Context7 tools...
+
+**Flowise Integration (4+ tools):**
+- `flowise-list-chatflows` - List chatflows: `{}`
+- `flowise-predict` - Send message to chatflow: `{"chatflowId": "abc", "question": "Hello"}`
+- And 2+ more Flowise tools...
 
 ### Browser-Use MCP Server (browser-use-mcp) - 30 Tools
 
@@ -350,6 +397,31 @@ Please get a summary of this long news article
 Please use Playwright to scrape this single-page application
 Please scrape this JavaScript-heavy page with custom timeout
 Please extract content from this dynamically loaded page
+```
+
+**🎯 PayloadCMS Backend Management:**
+
+*Authentication & Setup:*
+```
+Please use payload-login to authenticate with my PayloadCMS instance at https://cms.example.com
+Please check the connectivity to my PayloadCMS API using payload-health-check
+Please get my current user information using payload-get-current-user
+```
+
+*Content Management:*
+```
+Please create a new blog post in the 'posts' collection with title "Getting Started" and content "This is a guide..."
+Please find all published posts in the 'posts' collection, sorted by creation date
+Please update the blog post with ID "64a7b8c9d1234567890abcde" to change its status to published
+Please upload an image to the 'media' collection from https://example.com/image.jpg
+Please get the header global configuration and show me the current navigation menu
+```
+
+*Advanced Operations:*
+```
+Please execute a GraphQL query to get all posts with their authors and featured images
+Please count how many published posts I have in the 'posts' collection
+Please update the footer global with new social media links
 ```
 
 ## Troubleshooting
