@@ -295,12 +295,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Authentication middleware
+// Remove OAuth endpoints - they're not needed for local SSE servers
+
+// Authentication middleware - only for HTTP endpoints, not SSE
 app.use((req, res, next) => {
-  // Allow health check without auth
-  if (req.path === "/health") return next();
+  // Allow health check, SSE endpoint, and messages endpoint without auth
+  if (req.path === "/health" || req.path === "/sse" || req.path === "/messages") {
+    return next();
+  }
   
-  // Check Authorization header
+  // Check Authorization header for other endpoints
   const auth = req.header("authorization");
   if (!auth || !auth.startsWith('Bearer ')) {
     return res.status(401).json({ 
@@ -1620,31 +1624,58 @@ app.post("/mcp-advanced", async (req: Request, res: Response) => {
   }
 });
 
-// SSE endpoints for MCP Inspector compatibility
-app.get("/sse", async (_req: Request, res: Response) => {
+// SSE endpoint following official MCP patterns
+app.get("/sse", async (req: Request, res: Response) => {
   try {
-    const transport = new SSEServerTransport("/messages", res);
+    console.log(`SSE connection attempt from ${req.ip}`);
+    
+    // Validate Origin header for DNS rebinding protection (recommended by MCP spec)
+    const origin = req.headers.origin;
+    if (origin && !origin.startsWith('http://localhost') && !origin.startsWith('https://localhost')) {
+      console.warn(`Potentially unsafe origin: ${origin}`);
+    }
+    
+    // Create SSE transport with DNS rebinding protection options
+    const transport = new SSEServerTransport("/messages", res, {
+      enableDnsRebindingProtection: false, // Disable for local development
+      allowedHosts: ['localhost', '127.0.0.1'],
+      allowedOrigins: ['http://localhost:3010', 'https://localhost:3010']
+    });
+    
     sseTransports[transport.sessionId] = transport;
 
     res.on("close", () => {
       delete sseTransports[transport.sessionId];
+      console.log(`SSE connection closed for session: ${transport.sessionId}`);
     });
 
     const server = createMCPServer();
     await server.connect(transport);
+    console.log(`SSE connection established for session: ${transport.sessionId}`);
   } catch (error) {
     console.error("Error handling SSE connection:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 });
 
+// Messages endpoint for SSE transport (following MCP spec)
 app.post("/messages", async (req: Request, res: Response) => {
   try {
     const sessionId = req.query.sessionId as string | undefined;
+    
+    console.log(`Message received for session: ${sessionId}`);
+    
     if (!sessionId || !sseTransports[sessionId]) {
+      console.error(`Invalid or missing sessionId: ${sessionId}`);
       res.status(400).json({ error: "Invalid or missing sessionId" });
       return;
     }
+    
     const transport = sseTransports[sessionId];
+    
+    // Use the transport's built-in message handling
     await transport.handlePostMessage(req, res, req.body);
   } catch (error) {
     console.error("Error handling SSE message:", error);

@@ -30,12 +30,11 @@ check_port() {
 # Start Python MCP Server (SSE + HTTP)
 echo "🐍 Starting Python MCP Server on port 3009..."
 if check_port 3009; then
-    cd python && python3 mcp_server.py &
+    (cd python && python3 mcp_server.py) &
     PYTHON_PID=$!
     echo "✅ Python MCP Server started (PID: $PYTHON_PID)"
     echo "   - SSE: http://localhost:3009/sse"
     echo "   - HTTP: http://localhost:3009/mcp"
-    cd ..
 else
     echo "⚠️  Skipping Python server - port 3009 in use"
 fi
@@ -46,17 +45,17 @@ sleep 2
 # Start TypeScript MCP Server (SSE + HTTP)
 echo "📘 Starting TypeScript MCP Server on port 3010..."
 if check_port 3010; then
-    cd typescript
-    if [ ! -d "dist" ]; then
-        echo "🔧 Building TypeScript server..."
-        npm run build
-    fi
-    node dist/server.js &
+    (cd typescript && {
+        if [ ! -d "dist" ]; then
+            echo "🔧 Building TypeScript server..."
+            npm run build
+        fi
+        node dist/server.js
+    }) &
     TYPESCRIPT_PID=$!
     echo "✅ TypeScript MCP Server started (PID: $TYPESCRIPT_PID)"
     echo "   - SSE: http://localhost:3010/sse"
     echo "   - HTTP: http://localhost:3010/mcp-advanced"
-    cd ..
 else
     echo "⚠️  Skipping TypeScript server - port 3010 in use"
 fi
@@ -65,15 +64,14 @@ fi
 sleep 2
 
 # Start Browser-Use MCP Server (SSE)
-echo "🌐 Starting Browser-Use MCP Server on port 3000..."
-if check_port 3000; then
-    cd browser-use-mcp && python3 server.py &
+echo "🌐 Starting Browser-Use MCP Server on port 3011..."
+if check_port 3011; then
+    (cd browser-use-mcp && PORT=3011 python3 server.py) &
     BROWSER_PID=$!
     echo "✅ Browser-Use MCP Server started (PID: $BROWSER_PID)"
-    echo "   - SSE: http://localhost:3000/sse"
-    cd ..
+    echo "   - SSE: http://localhost:3011/sse"
 else
-    echo "⚠️  Skipping Browser-Use server - port 3000 in use"
+    echo "⚠️  Skipping Browser-Use server - port 3011 in use"
 fi
 
 echo ""
@@ -89,7 +87,7 @@ echo '    "typescript-local-sse": {'
 echo '      "transport": {"type": "sse", "url": "http://localhost:3010/sse"}'
 echo '    },'
 echo '    "browser-use-local-sse": {'
-echo '      "transport": {"type": "sse", "url": "http://localhost:3000/sse"}'
+echo '      "transport": {"type": "sse", "url": "http://localhost:3011/sse"}'
 echo '    }'
 echo '  }'
 echo "}"

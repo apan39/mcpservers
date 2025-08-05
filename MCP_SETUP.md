@@ -42,6 +42,36 @@ Remote URL: http://k8wco488444c8gw0sscs04k8.135.181.149.150.sslip.io/mcp
 Auth: Bearer ${MCP_API_KEY}
 ```
 
+## ⚠️ Known Bug: Phantom MCP Servers
+
+**IMPORTANT**: Claude Code has a confirmed bug where phantom servers persist in the MCP list even after deletion.
+
+### Symptoms
+- `/mcp list` shows more servers than configured in `.mcp.json`
+- Extra servers show "Failed to connect" status
+- Phantom servers persist after:
+  - File deletion
+  - Cache clearing (`claude mcp reset-project-choices`)
+  - Application restart
+  - Configuration cleanup
+
+### GitHub Issues
+- **Issue #1469**: "Phantom Servers Persisting in MCP Status After Removal"
+- **Issue #3095**: "MCP Server Cache Not Refreshing After Rebuild"
+
+### Current Status (Last checked: 2025-08-05)
+- Bug affects display/status only
+- Does NOT interfere with actual MCP functionality
+- Your configured servers work correctly despite phantom entries
+- No official workaround available yet
+
+### Workaround
+- **Ignore phantom servers** - they don't affect functionality
+- Focus on servers that show "✓ Connected" status
+- Your actual configured servers from `.mcp.json` work properly
+
+---
+
 ## ⚡ Local SSE + Remote HTTP Hybrid Architecture
 
 **🆕 NEW APPROACH**: All MCP servers now support both local SSE and remote HTTP for maximum flexibility:

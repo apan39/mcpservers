@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Environment variables
-API_KEY = os.environ.get("API_KEY", "changeme")
+API_KEY = os.environ.get("MCP_API_KEY", os.environ.get("API_KEY", "changeme"))
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -133,19 +133,7 @@ def create_app(port: int = 3000):
     # Set up SSE transport
     sse = SseServerTransport("/messages/")
     
-    # SSE handler
-    async def handle_sse(request):
-        logger.info(f"New SSE connection from {request.client.host}")
-        try:
-            async with sse.connect_sse(
-                request.scope, request.receive, request._send
-            ) as streams:
-                await server.run(
-                    streams[0], streams[1], server.create_initialization_options()
-                )
-        except Exception as e:
-            logger.error(f"SSE error: {e}")
-            raise
+    # SSE endpoints removed - use HTTP transport only
     
     # Health check endpoint
     async def health_check(request):
@@ -156,13 +144,103 @@ def create_app(port: int = 3000):
             "protocol_version": "2025-06-18"
         })
     
+    # HTTP MCP endpoint
+    async def handle_mcp_request(request):
+        """Handle MCP JSON-RPC requests over HTTP."""
+        try:
+            data = await request.json()
+            method = data.get('method')
+            params = data.get('params', {})
+            request_id = data.get('id')
+            
+            if method == 'initialize':
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {"name": "browser-use-mcp", "version": "1.0.0"}
+                    }
+                })
+            
+            elif method == 'notifications/initialized':
+                return JSONResponse({"jsonrpc": "2.0", "id": request_id, "result": {}})
+            
+            elif method == 'tools/list':
+                tools = []
+                for name, tool_data in tool_registry.items():
+                    tool_def = tool_data["definition"]
+                    tools.append({
+                        "name": tool_def.name,
+                        "description": tool_def.description,
+                        "inputSchema": tool_def.inputSchema
+                    })
+                
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {"tools": tools}
+                })
+            
+            elif method == 'tools/call':
+                tool_name = params.get('name')
+                arguments = params.get('arguments', {})
+                
+                if tool_name not in tool_registry:
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "error": {"code": -32601, "message": f"Tool not found: {tool_name}"}
+                    })
+                
+                try:
+                    handler = tool_registry[tool_name]["handler"]
+                    result = await handler(**arguments)
+                    
+                    # Convert result to proper format
+                    if isinstance(result, list):
+                        content = [{"type": item.type, "text": item.text} for item in result]
+                    else:
+                        content = [{"type": "text", "text": str(result)}]
+                    
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "result": {"content": content}
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Error executing tool {tool_name}: {e}")
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "error": {"code": -32603, "message": f"Internal error: {str(e)}"}
+                    })
+            
+            else:
+                return JSONResponse({
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {"code": -32601, "message": f"Method not found: {method}"}
+                })
+        
+        except Exception as e:
+            logger.error(f"Error handling MCP request: {e}")
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32700, "message": f"Parse error: {str(e)}"}
+            }, status_code=400)
+    
+    # SSE message handler removed
+    
     # Create Starlette app
     starlette_app = Starlette(
         debug=True,
         routes=[
-            Route("/sse", endpoint=handle_sse),
+            Route("/mcp", endpoint=handle_mcp_request, methods=["POST"]),
             Route("/health", endpoint=health_check),
-            Route("/messages/", endpoint=sse.handle_post_message, methods=["POST"])
         ],
         middleware=[
             (ApiKeyAuthMiddleware, [], {}),

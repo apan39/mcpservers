@@ -1,0 +1,10 @@
+Server Name,Status,Response Time,Tools,Environment,Transport,URL,Timestamp
+remote-python-tools,HEALTHY,35.374000ms,57,production,http,http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp,Tue Aug  5 13:26:21 CEST 2025
+remote-typescript-tools,DOWN,30.444000ms,N/A,production,http,http://zw0o84skskgc8kgooswgo8k4.135.181.149.150.sslip.io/mcp,Tue Aug  5 13:26:21 CEST 2025
+remote-browser-use-mcp,HEALTHY,29.721000ms,6,production,http,http://w8wcwg48ok4go8g8swgwkgk8.135.181.149.150.sslip.io/mcp,Tue Aug  5 13:26:21 CEST 2025
+python-local-http,HEALTHY,2.471000ms,57,development,http,http://localhost:3009/mcp,Tue Aug  5 13:26:22 CEST 2025
+python-local-sse,DOWN,N/A,N/A,development,sse,http://localhost:3009/sse,Tue Aug  5 13:26:22 CEST 2025
+typescript-local-sse,DOWN,N/A,N/A,development,sse,http://localhost:3010/sse,Tue Aug  5 13:26:22 CEST 2025
+typescript-local-http,DOWN,1.838000ms,N/A,development,http,http://localhost:3010/mcp,Tue Aug  5 13:26:22 CEST 2025
+browser-use-local-http,HEALTHY,2.068000ms,30,development,http,http://localhost:3011/mcp,Tue Aug  5 13:26:22 CEST 2025
+browser-use-local-sse,DOWN,N/A,N/A,development,sse,http://localhost:3011/sse,Tue Aug  5 13:26:22 CEST 2025

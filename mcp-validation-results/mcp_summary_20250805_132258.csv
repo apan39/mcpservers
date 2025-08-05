@@ -1,0 +1,10 @@
+Server Name,URL,Transport,Auth,Connectivity,Tools,Notes
+remote-python-tools,http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp,http,Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f,SUCCESS,TESTED,
+remote-typescript-tools,http://zw0o84skskgc8kgooswgo8k4.135.181.149.150.sslip.io/mcp,http,Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f,FAILED,SKIPPED,Connection failed
+remote-browser-use-mcp,http://w8wcwg48ok4go8g8swgwkgk8.135.181.149.150.sslip.io/mcp,http,Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f,SUCCESS,TESTED,
+python-local-http,http://localhost:3009/mcp,http,Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f,SUCCESS,TESTED,
+python-local-sse,http://localhost:3009/sse,sse,none,FAILED,SKIPPED,Connection failed
+typescript-local-sse,http://localhost:3010/sse,sse,none,FAILED,SKIPPED,Connection failed
+typescript-local-http,http://localhost:3010/mcp,http,Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f,FAILED,SKIPPED,Connection failed
+browser-use-local-http,http://localhost:3011/mcp,http,Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f,SUCCESS,TESTED,
+browser-use-local-sse,http://localhost:3011/sse,sse,none,FAILED,SKIPPED,Connection failed

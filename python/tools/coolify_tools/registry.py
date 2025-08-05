@@ -6,6 +6,7 @@ from .databases import DATABASE_TOOLS
 from .services import SERVICE_TOOLS
 from .deployments import DEPLOYMENT_TOOLS
 from .environments import ENVIRONMENT_TOOLS
+from .sse_deployment_tools import SSE_DEPLOYMENT_TOOLS
 
 def register_coolify_tools(tool_registry):
     """Register all Coolify API tools with the tool registry."""
@@ -27,3 +28,6 @@ def register_coolify_tools(tool_registry):
     
     # Register environment variable tools
     tool_registry.update(ENVIRONMENT_TOOLS)
+    
+    # Register SSE deployment monitoring tools
+    tool_registry.update(SSE_DEPLOYMENT_TOOLS)

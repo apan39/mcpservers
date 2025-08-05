@@ -17,8 +17,8 @@ from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
-from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.requests import Request  
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from tools.math_tools import register_math_tools
@@ -26,6 +26,7 @@ from tools.text_tools import register_text_tools
 from tools.crawl4ai_tools import register_crawl4ai_tools
 from tools.coolify_tools import register_coolify_tools
 from tools.help_tools import register_help_tools
+from tools.coolify_tools.sse_deployment_monitor import deployment_monitor
 from utils.logger import setup_logger
 
 # Load environment variables from .env file
@@ -199,6 +200,54 @@ async def health_check(request: Request) -> JSONResponse:
         "service": "simple-mcp-http-server"
     })
 
+async def sse_deployment_stream(request: Request) -> StreamingResponse:
+    """SSE endpoint for real-time deployment monitoring."""
+    deployment_uuid = request.path_params.get('deployment_uuid')
+    
+    if not deployment_uuid:
+        return JSONResponse({"error": "deployment_uuid required"}, status_code=400)
+    
+    # Check authorization for SSE endpoint
+    auth_header = request.headers.get('authorization')
+    expected_key = os.getenv('MCP_API_KEY', 'demo-api-key-123')
+    
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return JSONResponse({"error": "Missing Authorization header"}, status_code=401)
+    
+    token = auth_header[7:]  # Remove 'Bearer ' prefix  
+    if token != expected_key:
+        return JSONResponse({"error": "Invalid API key"}, status_code=401)
+    
+    logger.info(f"Starting SSE deployment stream for {deployment_uuid}")
+    
+    async def generate_sse_stream():
+        """Generate SSE stream for deployment updates."""
+        try:
+            # Send SSE headers
+            yield "event: connected\n"
+            yield f"data: {{\"message\": \"Connected to deployment {deployment_uuid}\"}}\n\n"
+            
+            # Stream deployment updates
+            async for event_data in deployment_monitor.get_deployment_stream(deployment_uuid):
+                yield event_data
+                
+        except asyncio.CancelledError:
+            logger.info(f"SSE stream cancelled for deployment {deployment_uuid}")
+        except Exception as e:
+            logger.error(f"Error in SSE stream for deployment {deployment_uuid}: {e}")
+            yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+    
+    return StreamingResponse(
+        generate_sse_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Authorization"
+        }
+    )
+
 def create_mcp_server() -> Server:
     """Create the MCP server with tools."""
     setup_tools()
@@ -241,57 +290,21 @@ def create_mcp_server() -> Server:
     
     return server
 
-# Global SSE transport and server instances
-sse_transport = None
-mcp_server = None
-
-async def handle_sse(request):
-    """Handle SSE connections for local development."""
-    global sse_transport, mcp_server
-    
-    if not sse_transport:
-        sse_transport = SseServerTransport("/messages")
-        mcp_server = create_mcp_server()
-    
-    logger.info(f"New SSE connection from {request.client.host}")
-    try:
-        async with sse_transport.connect_sse(
-            request.scope, request.receive, request._send
-        ) as streams:
-            await mcp_server.run(
-                streams[0], streams[1], mcp_server.create_initialization_options()
-            )
-    except Exception as e:
-        logger.error(f"SSE error: {e}")
-        raise
-
-async def handle_sse_messages(request):
-    """Handle SSE POST messages."""
-    global sse_transport
-    
-    if not sse_transport:
-        return JSONResponse({"error": "SSE transport not initialized"}, status_code=400)
-    
-    try:
-        return await sse_transport.handle_post_message(request)
-    except Exception as e:
-        logger.error(f"SSE message error: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+# SSE endpoints removed - use HTTP transport only
 
 def create_app() -> Starlette:
-    """Create the Starlette application with both HTTP and SSE support."""
+    """Create the Starlette application with HTTP transport only."""
     setup_tools()
     
     app = Starlette(
         debug=False,
         routes=[
-            # HTTP endpoints (for remote deployment)
+            # HTTP endpoints
             Route("/mcp", handle_mcp_request, methods=["POST"]),
             Route("/mcp/", handle_mcp_request, methods=["POST"]),
             Route("/health", health_check, methods=["GET"]),
-            # SSE endpoints (for local development)
-            Route("/sse", handle_sse),
-            Route("/messages", handle_sse_messages, methods=["POST"]),
+            # SSE endpoint for deployment monitoring
+            Route("/sse/deployment/{deployment_uuid}", sse_deployment_stream, methods=["GET"]),
         ],
     )
     
@@ -315,9 +328,9 @@ def main():
     
     logger.info(f"Starting Python MCP server on {host}:{port}")
     logger.info("Available endpoints:")
-    logger.info(f"  HTTP (remote): http://{host}:{port}/mcp")
-    logger.info(f"  SSE (local): http://{host}:{port}/sse")
+    logger.info(f"  HTTP: http://{host}:{port}/mcp")
     logger.info(f"  Health: http://{host}:{port}/health")
+    logger.info(f"  SSE Deployment Stream: http://{host}:{port}/sse/deployment/{{deployment_uuid}}")
     
     app = create_app()
     uvicorn.run(app, host=host, port=port, log_level=log_level, access_log=True)
