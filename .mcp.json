@@ -1,29 +1,5 @@
 {
   "mcpServers": {
-    "remote-python-tools": {
-      "type": "http",
-      "url": "http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/mcp",
-      "headers": {
-        "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
-        "Content-Type": "application/json"
-      }
-    },
-    "remote-typescript-tools": {
-      "type": "http",
-      "url": "http://zw0o84skskgc8kgooswgo8k4.135.181.149.150.sslip.io/mcp",
-      "headers": {
-        "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
-        "Content-Type": "application/json"
-      }
-    },
-    "remote-browser-use-mcp": {
-      "type": "http",
-      "url": "http://w8wcwg48ok4go8g8swgwkgk8.135.181.149.150.sslip.io/mcp",
-      "headers": {
-        "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",
-        "Content-Type": "application/json"
-      }
-    },
     "python-local-http": {
       "type": "http",
       "url": "http://localhost:3009/mcp",
@@ -37,7 +13,7 @@
       "url": "http://localhost:3010/sse"
     },
     "browser-use-local-http": {
-      "type": "http", 
+      "type": "http",
       "url": "http://localhost:3011/mcp",
       "headers": {
         "Authorization": "Bearer 4446e3ca599152c85fc96ecebb0367674e823694e5197a0ed8ca1262e825075f",

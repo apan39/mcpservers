@@ -48,3 +48,4 @@ tmp/
 temp/
 logs/
 .mcp.json
+remote_mcp_servers.md
