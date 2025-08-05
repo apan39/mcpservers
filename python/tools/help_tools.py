@@ -125,6 +125,12 @@ TOOL_METADATA = {
     "coolify-restart-service": {"category": "deployment", "complexity": "intermediate", "tags": ["restart", "services"]},
     "coolify-delete-service": {"category": "deployment", "complexity": "advanced", "tags": ["delete", "services", "destructive"]},
     "coolify-manage-service-env": {"category": "config", "complexity": "advanced", "tags": ["environment", "services", "variables"]},
+    
+    # SSE Real-time Deployment Monitoring (NEW)
+    "coolify-deploy-with-sse-monitoring": {"category": "deployment", "complexity": "advanced", "tags": ["deploy", "sse", "real-time", "monitoring"]},
+    "coolify-get-sse-deployment-status": {"category": "monitoring", "complexity": "intermediate", "tags": ["sse", "status", "real-time", "deployment"]},
+    "coolify-list-active-sse-deployments": {"category": "monitoring", "complexity": "basic", "tags": ["sse", "listing", "active", "deployments"]},
+    "coolify-stop-sse-deployment-monitoring": {"category": "monitoring", "complexity": "intermediate", "tags": ["sse", "stop", "monitoring"]},
 }
 
 def register_help_tools(tool_registry):
