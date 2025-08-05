@@ -17,6 +17,50 @@
 ## Project Structure
 This is an MCP (Model Context Protocol) servers project with deployment automation, part of the apan39 Coolify ecosystem.
 
+## Local/Remote Server Synchronization Protocol - CRITICAL ⚠️
+
+**MANDATORY: Local and remote servers MUST stay in sync feature-wise**
+
+### Feature Parity Requirements:
+- ✅ **Code Changes**: All new features must be deployed to both local and remote
+- ✅ **Tool Count**: Local and remote servers should have identical tool counts
+- ✅ **SSE Capabilities**: Both environments must support the same SSE endpoints
+- ✅ **API Compatibility**: Same tool names, parameters, and response formats
+- ✅ **Environment Variables**: Consistent configuration across environments
+
+### Synchronization Workflow:
+```bash
+# 1. Develop and test locally first
+./start-local-sse.sh
+# Test new features on local servers
+
+# 2. Commit and push changes to git
+git add .
+git commit -m "Add new feature X"
+git push origin main
+
+# 3. Deploy to remote servers immediately
+coolify-deploy-application --app_uuid zs8sk0cgs4s8gsgwswsg88ko --force true
+
+# 4. Verify feature parity
+# Compare tool counts and capabilities between local and remote
+```
+
+### Verification Commands:
+```bash
+# Check local server tool count
+curl http://localhost:3009/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list-tool-categories","arguments":{}}}'
+
+# Check remote server tool count  
+curl http://remote-server/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list-tool-categories","arguments":{}}}'
+```
+
+**⚠️ CRITICAL RULES:**
+- Never leave local features undeployed for more than 1 hour
+- Always test on local before deploying to remote
+- Document any temporary feature differences in this file
+- Verify tool counts match after each deployment
+
 ## Coolify Deployment Protocol
 
 **MANDATORY: Read this before any Coolify operations**
@@ -27,18 +71,36 @@ This is an MCP (Model Context Protocol) servers project with deployment automati
 - Use MCP Coolify tools to check server status: `coolify-get-version`
 - Confirm target application UUID and current status
 
-### 2. Deployment Process
+### 2. Deployment Process - USE SSE MONITORING TOOLS ⚡
+
+**🚀 PREFERRED METHOD: Use SSE Deployment Monitoring Tools**
 ```bash
-# 1. Trigger deployment via API (ensure correct authentication)
+# 1. Start deployment with real-time monitoring (RECOMMENDED)
+coolify-deploy-with-sse-monitoring --app_uuid APPLICATION_UUID --force true
+
+# 2. Monitor real-time progress
+coolify-get-sse-deployment-status --deployment_uuid DEPLOYMENT_UUID
+
+# 3. List all active deployments being monitored
+coolify-list-active-sse-deployments
+```
+
+**🔧 FALLBACK METHOD: Traditional API Deployment**
+```bash
+# Only use if SSE tools are unavailable
 source .env
 curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"uuid": "APPLICATION_UUID"}' \
   "http://135.181.149.150:8000/api/v1/deploy"
-
-# 2. Capture deployment UUID from response
-# 3. Monitor deployment progress with logs
 ```
+
+**⚡ Benefits of SSE Method:**
+- ✅ **Real-time Progress** - Live updates every 5 seconds
+- ✅ **No Command Overlap** - Know exactly when deployment completes
+- ✅ **Automatic Completion Detection** - Stops monitoring when done
+- ✅ **Background Monitoring** - Non-blocking, continues in background
+- ✅ **Rich Status Information** - Detailed deployment progress
 
 ### 3. Deployment Verification Protocol
 **Always perform these checks after deployment:**
@@ -73,7 +135,7 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 
 ### 5.1. Local Development Servers ✅
 **All local MCP servers fully operational:**
-- ✅ **Python Local SSE** (`http://localhost:3009/sse`) - Complete Coolify management suite (57 tools)
+- ✅ **Python Local SSE** (`http://localhost:3009/sse`) - Complete Coolify management suite (61 tools including SSE deployment monitoring)
 - ✅ **TypeScript Local SSE** (`http://localhost:3010/sse`) - Multi-tool integration server  
 - ✅ **Browser-use Local SSE** (`http://localhost:3011/sse`) - Browser automation tools
 
@@ -82,6 +144,39 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 - ✅ **Authentication Fixed** - Browser-use server now uses consistent `MCP_API_KEY`
 - ✅ **TypeScript SSE Complete** - Proper session management, DNS protection, no auth required
 - ✅ **All Start Scripts Working** - `./start-local-sse.sh` fully operational
+
+### 5.2. Local Server Startup Rules ⚠️ **IMPORTANT**
+
+**MANDATORY: Always use the proper startup script when testing or developing:**
+
+```bash
+# ✅ CORRECT: Use the official startup script
+./start-local-sse.sh
+
+# ❌ WRONG: Never start servers individually
+python3 python/mcp_server.py  # Don't do this
+node typescript/dist/server.js  # Don't do this
+```
+
+**Why use start-local-sse.sh:**
+- ✅ **Proper Environment Variables** - Loads .env file correctly
+- ✅ **Correct Host Binding** - Uses 127.0.0.1 for local development
+- ✅ **Port Conflict Detection** - Checks for port availability first
+- ✅ **Process Management** - Handles background processes properly
+- ✅ **Coordinated Startup** - Starts all servers in correct order
+- ✅ **Clean Shutdown** - Provides proper cleanup with Ctrl+C
+
+**Server Management Commands:**
+```bash
+./start-local-sse.sh    # Start all local servers
+./stop-local-sse.sh     # Stop all local servers
+# Press Ctrl+C in terminal running start-local-sse.sh to stop
+```
+
+**Local Server URLs (after using start-local-sse.sh):**
+- Python: `http://localhost:3009/mcp` (HTTP) + `http://localhost:3009/sse` (SSE)
+- TypeScript: `http://localhost:3010/mcp-advanced` (HTTP) + `http://localhost:3010/sse` (SSE)  
+- Browser-use: `http://localhost:3011/sse` (SSE only)
 
 ### 5.2. MCP Inspector Integration ✅
 **Comprehensive debugging and validation platform:**
@@ -124,47 +219,122 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 
 **API Compliance:** All tools now conform to official Coolify API specification
 
-### 6.1 SSE Deployment Monitoring Usage
+### 6.1 SSE Deployment Monitoring Usage - PRODUCTION READY ✅
 
-**🚀 How to Use Real-time Deployment Monitoring:**
+**🚀 VERIFIED: All 4 SSE Tools Tested and Operational on Remote Server**
 
-1. **Start Deployment with Monitoring:**
-   ```bash
-   # Use the new SSE-enabled deployment tool instead of regular deploy
-   coolify-deploy-with-sse-monitoring --app_uuid YOUR_APP_UUID --force true
-   ```
+#### **Step-by-Step Deployment with SSE Monitoring:**
 
-2. **Monitor Real-time Progress:**
-   ```bash
-   # Check current status (includes deployment UUID)
-   coolify-get-sse-deployment-status --deployment_uuid DEPLOYMENT_UUID
-   
-   # List all active deployments being monitored
-   coolify-list-active-sse-deployments
-   ```
+**1. Check Active Monitoring:**
+```bash
+# Always check what's currently being monitored
+coolify-list-active-sse-deployments
+# Expected: "📊 **No Active SSE Deployments**" (if nothing running)
+```
 
-3. **Stream Live Updates (Optional):**
-   ```bash
-   # Connect to SSE stream for real-time events
-   curl -N -H "Authorization: Bearer YOUR_API_KEY" \
-     "http://localhost:3009/sse/deployment/DEPLOYMENT_UUID"
-   ```
+**2. Start Deployment with Real-time Monitoring:**
+```bash
+# PRIMARY METHOD: Use SSE monitoring for all deployments
+coolify-deploy-with-sse-monitoring --app_uuid YOUR_APP_UUID --force true
 
-4. **Benefits Over Traditional Deployment:**
-   - ✅ **No Command Overlap** - Know exactly when deployment finishes
-   - ✅ **Real-time Status** - Live progress updates every 5 seconds
-   - ✅ **Automatic Completion Detection** - Stops monitoring when done
-   - ✅ **Background Monitoring** - Non-blocking, continues in background
-   - ✅ **SSE Stream Available** - For real-time dashboard integration
+# FALLBACK: If SSE deploy fails, use regular deploy + monitor manually
+coolify-deploy-application --app_uuid YOUR_APP_UUID --force true
+# Then get deployment UUID from response and monitor separately
+```
 
-5. **Example Client:** See `python/examples/sse_deployment_client.py` for complete usage example
+**3. Monitor Deployment Progress:**
+```bash
+# Check specific deployment status (get UUID from step 2)
+coolify-get-sse-deployment-status --deployment_uuid DEPLOYMENT_UUID
 
-### 7. Communication Guidelines
-- **Use SSE deployment monitoring** to eliminate command overlap issues
-- **Never assume deployment success** without explicit verification
-- **Always check logs** when deployments fail
+# List all deployments currently being monitored
+coolify-list-active-sse-deployments
+```
+
+**4. Stop Monitoring (Optional):**
+```bash
+# Stop SSE monitoring for a specific deployment
+coolify-stop-sse-deployment-monitoring --deployment_uuid DEPLOYMENT_UUID
+# Expected: "🛑 **SSE Deployment Monitoring Stopped**"
+```
+
+**5. Real-time SSE Stream (Advanced):**
+```bash
+# Local server SSE endpoint
+curl -N -H "Authorization: Bearer YOUR_API_KEY" \
+  "http://localhost:3009/sse/deployment/DEPLOYMENT_UUID"
+
+# Remote server SSE endpoint  
+curl -N -H "Authorization: Bearer YOUR_API_KEY" \
+  "http://zs8sk0cgs4s8gsgwswsg88ko.135.181.149.150.sslip.io/sse/deployment/DEPLOYMENT_UUID"
+
+# Expected response:
+# event: connected
+# data: {"message": "Connected to deployment DEPLOYMENT_UUID"}
+```
+
+#### **Verified Tool Capabilities:**
+
+✅ **coolify-list-active-sse-deployments** (Basic)
+- Lists all deployments currently being monitored in real-time
+- Returns empty list when no deployments active
+
+✅ **coolify-deploy-with-sse-monitoring** (Advanced) 
+- Starts deployment AND begins real-time monitoring
+- Handles API errors gracefully (e.g., no changes to deploy)
+- Returns deployment UUID for tracking
+
+✅ **coolify-get-sse-deployment-status** (Intermediate)
+- Gets current status of a specific deployment
+- Validates deployment UUID exists in monitoring system
+- Provides detailed error messages for invalid UUIDs
+
+✅ **coolify-stop-sse-deployment-monitoring** (Intermediate)
+- Stops real-time monitoring for specific deployment  
+- Provides confirmation with deployment details
+- Graceful handling of non-existent deployments
+
+#### **When to Use SSE vs Traditional Deployment:**
+
+**✅ USE SSE MONITORING WHEN:**
+- Deploying critical applications requiring monitoring
+- Need to know exact completion time
+- Running multiple deployments simultaneously  
+- Building deployment dashboards or automation
+- Want to eliminate "deployment still running?" guesswork
+
+**⚠️ USE TRADITIONAL DEPLOYMENT WHEN:**
+- SSE tools temporarily unavailable
+- Simple one-off deployments  
+- Legacy scripts that haven't been updated yet
+
+#### **Example Integration:** 
+Complete working example: `python/examples/sse_deployment_client.py`
+- Shows full workflow from deployment to completion
+- Demonstrates SSE stream consumption
+- Includes proper error handling
+
+### 7. Communication Guidelines - SSE First Approach 🚀
+
+**PRIMARY DEPLOYMENT METHOD: Always use SSE monitoring tools**
+- ✅ **Use `coolify-deploy-with-sse-monitoring`** as default deployment method
+- ✅ **Check `coolify-list-active-sse-deployments`** before starting new deployments  
+- ✅ **Monitor with `coolify-get-sse-deployment-status`** instead of guessing completion
+- ✅ **Use SSE streaming endpoint** for real-time dashboard integration
+- ⚠️ **Fallback to traditional tools** only when SSE unavailable
+
+**VERIFICATION PROTOCOL:**
+- **Never assume deployment success** without explicit status verification
+- **Always check logs** when deployments fail using `coolify-get-deployment-logs`
 - **Use systematic debugging** approach from COOLIFY_API_DEBUGGING.md
+- **Verify local/remote feature parity** after each deployment
 - **Update status** in this document after major changes
+
+**LOCAL/REMOTE SYNCHRONIZATION:**
+- **Test locally first** using `./start-local-sse.sh`
+- **Deploy immediately** to maintain feature parity  
+- **Verify tool counts match** between local and remote servers
+- **Document any temporary differences** in this file
 
 ### 8. Code Development Protocol
 **MANDATORY: Follow this sequence when implementing new features**
