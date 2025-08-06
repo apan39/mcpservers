@@ -42,8 +42,16 @@ class DeploymentMonitor:
                 deployment_uuid = deployment_data.get('uuid', deployment_data.get('deployment_uuid'))
             
             if not deployment_uuid:
-                logger.error(f"No deployment UUID found in response: {deployment_data}")
-                raise ValueError("No deployment UUID returned from API")
+                # Debug: Show the full response structure
+                logger.error(f"DEBUG - Full API response: {json.dumps(deployment_data, indent=2)}")
+                
+                # Try to extract any potential deployment info
+                deployment_keys = [k for k in deployment_data.keys() if 'deploy' in k.lower()]
+                uuid_keys = [k for k in deployment_data.keys() if 'uuid' in k.lower() or 'id' in k.lower()]
+                logger.error(f"DEBUG - Keys with 'deploy': {deployment_keys}")
+                logger.error(f"DEBUG - Keys with 'uuid/id': {uuid_keys}")
+                
+                raise ValueError(f"No deployment UUID returned from API. Response keys: {list(deployment_data.keys())}")
             
             # Initialize monitoring
             monitor_data = {
