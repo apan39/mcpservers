@@ -2,7 +2,7 @@
 """
 Python MCP Server with HTTP and SSE transport support.
 Supports both local development (SSE) and remote deployment (HTTP).
-Updated: Testing SSE deployment monitoring - 2025-08-06
+Updated: Testing FIXED SSE deployment monitoring - 2025-08-06
 """
 
 import asyncio
