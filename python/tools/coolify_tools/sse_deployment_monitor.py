@@ -31,9 +31,18 @@ class DeploymentMonitor:
             response.raise_for_status()
             
             deployment_data = response.json()
-            deployment_uuid = deployment_data.get('uuid', deployment_data.get('deployment_uuid'))
+            deployment_uuid = None
+            
+            # Parse deployment UUID from response structure (same as working deploy_application)
+            if 'deployments' in deployment_data and deployment_data['deployments']:
+                deployment_info = deployment_data['deployments'][0]
+                deployment_uuid = deployment_info.get('deployment_uuid')
+            else:
+                # Fallback to other possible locations
+                deployment_uuid = deployment_data.get('uuid', deployment_data.get('deployment_uuid'))
             
             if not deployment_uuid:
+                logger.error(f"No deployment UUID found in response: {deployment_data}")
                 raise ValueError("No deployment UUID returned from API")
             
             # Initialize monitoring
