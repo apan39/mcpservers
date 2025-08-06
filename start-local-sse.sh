@@ -101,8 +101,63 @@ echo "🛑 To stop all servers: ./stop-local-sse.sh"
 echo ""
 echo "Press Ctrl+C to stop all servers"
 
+# Create PID directory for tracking
+PID_DIR="/tmp/mcp-servers"
+mkdir -p "$PID_DIR"
+
+# Store PIDs in files for reliable cleanup
+if [ ! -z "$PYTHON_PID" ]; then
+    echo "$PYTHON_PID" > "$PID_DIR/python.pid"
+fi
+
+if [ ! -z "$TYPESCRIPT_PID" ]; then
+    echo "$TYPESCRIPT_PID" > "$PID_DIR/typescript.pid"
+fi
+
+if [ ! -z "$BROWSER_PID" ]; then
+    echo "$BROWSER_PID" > "$PID_DIR/browser.pid"
+fi
+
+# Cleanup function
+cleanup_servers() {
+    echo ""
+    echo "🛑 Stopping all MCP servers..."
+    
+    # Kill servers using stored PIDs
+    for pid_file in "$PID_DIR"/*.pid; do
+        if [ -f "$pid_file" ]; then
+            PID=$(cat "$pid_file")
+            SERVER=$(basename "$pid_file" .pid)
+            
+            if kill -0 "$PID" 2>/dev/null; then
+                echo "🔄 Stopping $SERVER server (PID: $PID)..."
+                kill "$PID" 2>/dev/null
+                sleep 2
+                
+                # Force kill if still running
+                if kill -0 "$PID" 2>/dev/null; then
+                    echo "🔧 Force stopping $SERVER server..."
+                    kill -9 "$PID" 2>/dev/null
+                fi
+            fi
+            
+            rm -f "$pid_file"
+        fi
+    done
+    
+    # Final cleanup using port-based killing
+    echo "🔧 Final port-based cleanup..."
+    lsof -ti:3009,3010,3011 | xargs kill -9 2>/dev/null || true
+    
+    # Remove PID directory
+    rm -rf "$PID_DIR"
+    
+    echo "✅ All servers stopped"
+    exit 0
+}
+
 # Keep script running and handle shutdown
-trap 'echo ""; echo "🛑 Stopping all MCP servers..."; kill $PYTHON_PID $TYPESCRIPT_PID $BROWSER_PID 2>/dev/null; exit' INT
+trap cleanup_servers INT TERM
 
 # Wait for background processes
 wait
