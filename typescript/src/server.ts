@@ -16,6 +16,7 @@ import { registerPlaywrightTools } from "./playwrightTools.js";
 import { registerFlowiseTools } from "./flowiseTools.js";
 import { registerContext7Tools } from "./context7Tools.js";
 import { registerPayloadCMSTools } from "./payloadcmsTools.js";
+import { registerPorkbunTools } from "./porkbunTools.js";
 import { 
   githubGetUser, githubListRepos, githubGetRepo, githubListIssues, 
   githubCreateIssue, githubListPRs, githubGetContents, githubSearchRepos,
@@ -263,6 +264,9 @@ function createMCPServer(): McpServer {
   
   // Register PayloadCMS tools
   registerPayloadCMSTools(server);
+  
+  // Register Porkbun tools
+  registerPorkbunTools(server);
   
   return server;
 }
@@ -1050,6 +1054,176 @@ app.post("/mcp", async (req: Request, res: Response) => {
                   config: { type: "object" }
                 }
               }
+            },
+            // Porkbun Domain Management Tools
+            {
+              name: "porkbun-list-domains",
+              description: "List all domains in your Porkbun account",
+              inputSchema: {
+                type: "object",
+                properties: {}
+              }
+            },
+            {
+              name: "porkbun-check-domain-availability",
+              description: "Check if a domain is available for registration",
+              inputSchema: {
+                type: "object",
+                required: ["domain"],
+                properties: {
+                  domain: {
+                    type: "string",
+                    description: "Domain name to check availability for"
+                  }
+                }
+              }
+            },
+            {
+              name: "porkbun-get-domain-nameservers",
+              description: "Get nameservers for a domain",
+              inputSchema: {
+                type: "object",
+                required: ["domain"],
+                properties: {
+                  domain: {
+                    type: "string",
+                    description: "Domain name"
+                  }
+                }
+              }
+            },
+            {
+              name: "porkbun-update-domain-nameservers",
+              description: "Update nameservers for a domain",
+              inputSchema: {
+                type: "object",
+                required: ["domain", "nameservers"],
+                properties: {
+                  domain: {
+                    type: "string",
+                    description: "Domain name"
+                  },
+                  nameservers: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Array of nameserver hostnames"
+                  }
+                }
+              }
+            },
+            {
+              name: "porkbun-create-dns-record",
+              description: "Create a new DNS record for a domain",
+              inputSchema: {
+                type: "object",
+                required: ["domain", "name", "type", "content"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" },
+                  name: { type: "string", description: "Record name (subdomain or @ for root)" },
+                  type: { type: "string", description: "DNS record type (A, AAAA, CNAME, MX, TXT, NS, SRV, etc.)" },
+                  content: { type: "string", description: "Record content/value" },
+                  ttl: { type: "number", description: "Time to live in seconds (optional, default: 600)" },
+                  prio: { type: "number", description: "Priority for MX/SRV records (optional)" }
+                }
+              }
+            },
+            {
+              name: "porkbun-edit-dns-record",
+              description: "Edit an existing DNS record",
+              inputSchema: {
+                type: "object",
+                required: ["domain", "recordId"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" },
+                  recordId: { type: "string", description: "DNS record ID to edit" },
+                  name: { type: "string", description: "New record name (optional)" },
+                  type: { type: "string", description: "New DNS record type (optional)" },
+                  content: { type: "string", description: "New record content/value (optional)" },
+                  ttl: { type: "number", description: "New time to live in seconds (optional)" },
+                  prio: { type: "number", description: "New priority for MX/SRV records (optional)" }
+                }
+              }
+            },
+            {
+              name: "porkbun-delete-dns-record",
+              description: "Delete a DNS record",
+              inputSchema: {
+                type: "object",
+                required: ["domain", "recordId"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" },
+                  recordId: { type: "string", description: "DNS record ID to delete" }
+                }
+              }
+            },
+            {
+              name: "porkbun-retrieve-dns-records",
+              description: "Retrieve all DNS records for a domain",
+              inputSchema: {
+                type: "object",
+                required: ["domain"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" }
+                }
+              }
+            },
+            {
+              name: "porkbun-add-url-forward",
+              description: "Add URL forwarding for a domain/subdomain",
+              inputSchema: {
+                type: "object",
+                required: ["domain", "subdomain", "location", "type"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" },
+                  subdomain: { type: "string", description: "Subdomain to forward (@ for root domain)" },
+                  location: { type: "string", description: "Destination URL" },
+                  type: { type: "string", description: "Forward type: temporary_redirect (302) or permanent_redirect (301)" },
+                  wildcard: { type: "string", description: "Wildcard forwarding (yes/no) - optional" },
+                  includeExclude: { type: "string", description: "Include path in redirect (include/exclude) - optional" }
+                }
+              }
+            },
+            {
+              name: "porkbun-get-url-forwards",
+              description: "Get all URL forwards for a domain",
+              inputSchema: {
+                type: "object",
+                required: ["domain"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" }
+                }
+              }
+            },
+            {
+              name: "porkbun-delete-url-forward",
+              description: "Delete a URL forward",
+              inputSchema: {
+                type: "object",
+                required: ["domain", "forwardId"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" },
+                  forwardId: { type: "string", description: "URL forward ID to delete" }
+                }
+              }
+            },
+            {
+              name: "porkbun-get-ssl-bundle",
+              description: "Retrieve SSL certificate bundle for a domain",
+              inputSchema: {
+                type: "object",
+                required: ["domain"],
+                properties: {
+                  domain: { type: "string", description: "Domain name" }
+                }
+              }
+            },
+            {
+              name: "porkbun-test-connection",
+              description: "Test connection to Porkbun API",
+              inputSchema: {
+                type: "object",
+                properties: {}
+              }
             }
           ]
         }
@@ -1525,6 +1699,24 @@ Solutions:
               {
                 type: "text",
                 text: `PayloadCMS tool "${name}" requires the advanced MCP endpoint. Use /mcp-advanced instead.`
+              }
+            ]
+          }
+        });
+        return;
+      }
+
+      // Handle Porkbun tools
+      if (name.startsWith("porkbun-")) {
+        // For the simple endpoint, just pass through to advanced endpoint
+        res.json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Porkbun tool "${name}" requires the advanced MCP endpoint. Use /mcp-advanced instead.`
               }
             ]
           }
