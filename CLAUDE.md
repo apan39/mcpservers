@@ -39,8 +39,8 @@ git add .
 git commit -m "Add new feature X"
 git push origin main
 
-# 3. Deploy to remote servers immediately
-coolify-deploy-application --app_uuid zs8sk0cgs4s8gsgwswsg88ko --force true
+# 3. Deploy to remote servers immediately using SSE monitoring
+coolify-deploy-with-sse-monitoring --app_uuid zs8sk0cgs4s8gsgwswsg88ko --force true
 
 # 4. Verify feature parity
 # Compare tool counts and capabilities between local and remote
@@ -60,6 +60,49 @@ curl http://remote-server/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
 - Always test on local before deploying to remote
 - Document any temporary feature differences in this file
 - Verify tool counts match after each deployment
+
+## ⚠️ DEPLOYMENT TOOL PRIORITY MATRIX - CRITICAL FOR AI
+
+**🚨 MANDATORY: Always use this tool selection hierarchy to avoid losing SSE monitoring capabilities**
+
+### **✅ PRIMARY DEPLOYMENT TOOLS (Use These First):**
+
+1. **`coolify-deploy-with-sse-monitoring`** 
+   - **Usage:** Single application deployments with real-time monitoring
+   - **Features:** ✅ SSE monitoring, ✅ Real-time status, ✅ Automatic completion detection
+   - **When:** Default choice for ALL single app deployments
+
+2. **`coolify-bulk-deploy`**
+   - **Usage:** Multiple applications simultaneously
+   - **Features:** ❌ No SSE monitoring, ✅ Batch operations
+   - **When:** Only for deploying multiple apps at once
+
+### **⚠️ LEGACY/FALLBACK TOOLS (Avoid When Possible):**
+
+3. **`coolify-deploy-application`** 
+   - **Usage:** Basic deployment without monitoring
+   - **Features:** ❌ No SSE monitoring, ❌ No real-time status
+   - **When:** ONLY when SSE tools are unavailable or broken
+
+### **🎯 AI Tool Selection Rules:**
+
+- **✅ DO:** Always try `coolify-deploy-with-sse-monitoring` first for single deployments
+- **✅ DO:** Use `coolify-bulk-deploy` only for multiple app deployments
+- **❌ DON'T:** Use `coolify-deploy-application` unless explicitly told it's a fallback
+- **❌ DON'T:** Choose randomly between deployment tools - follow this hierarchy
+
+### **🚀 Correct Usage Examples:**
+
+```bash
+# ✅ CORRECT: Single app deployment with SSE monitoring
+coolify-deploy-with-sse-monitoring --app_uuid zs8sk0cgs4s8gsgwswsg88ko --force true
+
+# ✅ CORRECT: Multiple apps with bulk deployment
+coolify-bulk-deploy --app_uuids "uuid1,uuid2,uuid3" --parallel false
+
+# ❌ WRONG: Using basic deploy when SSE is available
+coolify-deploy-application --app_uuid zs8sk0cgs4s8gsgwswsg88ko --force true
+```
 
 ## Coolify Deployment Protocol
 
@@ -147,15 +190,22 @@ curl -X POST -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
 
 ### 5.2. Local Server Startup Rules ⚠️ **IMPORTANT**
 
-**MANDATORY: Always use the proper startup script when testing or developing:**
+**MANDATORY: Always use the proper startup/shutdown scripts when testing or developing:**
 
 ```bash
 # ✅ CORRECT: Use the official startup script
 ./start-local-sse.sh
 
+# ✅ CORRECT: Use the official shutdown script  
+./stop-local-sse.sh
+
 # ❌ WRONG: Never start servers individually
 python3 python/mcp_server.py  # Don't do this
 node typescript/dist/server.js  # Don't do this
+
+# ❌ WRONG: Never kill servers manually
+kill PID  # Don't do this
+pkill -f "server"  # Don't do this
 ```
 
 **Why use start-local-sse.sh:**
@@ -313,6 +363,25 @@ Complete working example: `python/examples/sse_deployment_client.py`
 - Shows full workflow from deployment to completion
 - Demonstrates SSE stream consumption
 - Includes proper error handling
+
+#### **🚨 KNOWN ISSUES & WORKAROUNDS:**
+
+**Issue:** `coolify-deploy-with-sse-monitoring` returns "No deployment UUID returned from API"
+- **Root Cause:** SSE deployment tool may not properly handle the deployment API response
+- **Workaround:** Use `coolify-deploy-application` to start deployment, then manually monitor with SSE tools
+- **Status:** Investigated 2025-08-06 - Regular deployment tools work fine, SSE variant needs debugging
+
+**Correct Workaround Pattern:**
+```bash
+# Step 1: Start deployment with regular tool
+coolify-deploy-application --app_uuid YOUR_APP_UUID --force true
+
+# Step 2: Get deployment UUID from response  
+# Expected output: "Deployment UUID: abc123def456"
+
+# Step 3: Monitor with SSE tools (if needed)
+coolify-get-deployment-logs --deployment_uuid abc123def456
+```
 
 ### 7. Communication Guidelines - SSE First Approach 🚀
 
